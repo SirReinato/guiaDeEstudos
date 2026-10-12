@@ -4,7 +4,13 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { AuthModal } from "./components/AuthModal";
 import { AdminPanel } from "./components/AdminPanel";
 import { EditalManager } from "./components/EditalManager";
+import { DailyStreakPlayer } from "./components/DailyStreakPlayer";
+import { FlashcardManager } from "./components/FlashcardManager";
 import { editaisService, type EditalCompleto } from "./services/editaisService";
+import {
+  flashcardsService,
+  type FlashcardComTopico,
+} from "./services/flashcardsService";
 import { supabase } from "./services/supabase";
 import {
   theme,
@@ -110,18 +116,22 @@ const DashboardConteudo: React.FC = () => {
   const { user, profile, signOut, loading } = useAuth();
   const [supabaseConectado, setSupabaseConectado] = useState<boolean>(false);
   const [mostrarPainelAdmin, setMostrarPainelAdmin] = useState<boolean>(false);
-  const [abaAtiva, setAbaAtiva] = useState<"editais" | "overview">("editais");
+  const [abaAtiva, setAbaAtiva] = useState<"streak" | "flashcards" | "editais" | "overview">("streak");
 
-  // Dados dos editais
+  // Editais
   const [editais, setEditais] = useState<EditalCompleto[]>([]);
   const [editalSelecionado, setEditalSelecionado] = useState<EditalCompleto | null>(null);
+
+  // Flashcards & Streak
+  const [cards, setCards] = useState<FlashcardComTopico[]>([]);
+  const [cardsRevisadosHoje, setCardsRevisadosHoje] = useState<number>(0);
+  const META_DIARIA = 5;
 
   const carregarEditais = useCallback(async () => {
     if (!user) return;
     const { data } = await editaisService.listarEditais();
     if (data) {
       setEditais(data);
-      // Se tiver edital selecionado, atualiza-lo na lista
       if (editalSelecionado) {
         const atualizado = data.find((e) => e.id === editalSelecionado.id) || null;
         setEditalSelecionado(atualizado);
@@ -130,6 +140,18 @@ const DashboardConteudo: React.FC = () => {
       }
     }
   }, [user, editalSelecionado]);
+
+  const carregarFlashcards = useCallback(async () => {
+    if (!user) return;
+    const { data } = await flashcardsService.listarFlashcards(user.id);
+    if (data) {
+      setCards(data);
+    }
+    const { data: streakData } = await flashcardsService.obterStreak(user.id);
+    if (streakData) {
+      setCardsRevisadosHoje(streakData.cards_revisados || 0);
+    }
+  }, [user]);
 
   useEffect(() => {
     const testarConexao = async () => {
@@ -146,8 +168,15 @@ const DashboardConteudo: React.FC = () => {
   useEffect(() => {
     if (user) {
       carregarEditais();
+      carregarFlashcards();
     }
-  }, [user, carregarEditais]);
+  }, [user, carregarEditais, carregarFlashcards]);
+
+  const handleResponderCard = async (card: FlashcardComTopico, qualidade: 0 | 3 | 4 | 5) => {
+    await flashcardsService.responderFlashcard(card, qualidade);
+    setCardsRevisadosHoje((prev) => prev + 1);
+    await carregarFlashcards();
+  };
 
   const isAdmin = profile?.role === "admin" || profile?.username?.toLowerCase() === "sirreinato";
   const isPending = profile?.status === "pending" && !isAdmin;
@@ -244,39 +273,74 @@ const DashboardConteudo: React.FC = () => {
             <>
               <AbaNavegacaoContainerStl>
                 <AbaBotaoStl
+                  $ativa={abaAtiva === "streak"}
+                  onClick={() => setAbaAtiva("streak")}
+                >
+                  ⚡ Dose Diária (Anki / SM-2)
+                </AbaBotaoStl>
+                <AbaBotaoStl
+                  $ativa={abaAtiva === "flashcards"}
+                  onClick={() => setAbaAtiva("flashcards")}
+                >
+                  🗂️ Gerenciar Cards ({cards.length})
+                </AbaBotaoStl>
+                <AbaBotaoStl
                   $ativa={abaAtiva === "editais"}
                   onClick={() => setAbaAtiva("editais")}
                 >
-                  📋 Módulo 1: Editais & Disciplinas
+                  📋 Editais & Disciplinas ({editais.length})
                 </AbaBotaoStl>
                 <AbaBotaoStl
                   $ativa={abaAtiva === "overview"}
                   onClick={() => setAbaAtiva("overview")}
                 >
-                  📊 Visão dos Módulos Futuros
+                  📊 Próximas Etapas
                 </AbaBotaoStl>
               </AbaNavegacaoContainerStl>
 
-              {abaAtiva === "editais" ? (
+              {/* ABA 1: SESSÃO DIÁRIA INTERATIVA */}
+              {abaAtiva === "streak" && (
+                <DailyStreakPlayer
+                  cards={cards}
+                  onResponder={handleResponderCard}
+                  cardsRevisadosHoje={cardsRevisadosHoje}
+                  metaDiaria={META_DIARIA}
+                />
+              )}
+
+              {/* ABA 2: GERENCIAMENTO DE CARDS */}
+              {abaAtiva === "flashcards" && (
+                <FlashcardManager
+                  editalAtivo={editalSelecionado}
+                  cards={cards}
+                  onRecarregar={carregarFlashcards}
+                />
+              )}
+
+              {/* ABA 3: GESTÃO DE EDITAIS */}
+              {abaAtiva === "editais" && (
                 <EditalManager
                   editais={editais}
                   onRecarregar={carregarEditais}
                   editalSelecionado={editalSelecionado}
                   onSelecionarEdital={(e) => setEditalSelecionado(e)}
                 />
-              ) : (
+              )}
+
+              {/* ABA 4: VISÃO GERAL */}
+              {abaAtiva === "overview" && (
                 <CardStl $destaqueBorda style={{ maxWidth: "1100px", margin: "1rem 0" }}>
-                  <TitulosSecundariosStl>Ecossistema de Estudos Integrado</TitulosSecundariosStl>
+                  <TitulosSecundariosStl>Ciclo de Estudos TI em Andamento</TitulosSecundariosStl>
                   <ParagrafosStl $secundario style={{ marginTop: "0.5rem" }}>
-                    Toda a estrutura criada em <strong>Editais e Disciplinas</strong> alimentará
-                    automaticamente as próximas etapas:
+                    Status atual do projeto:
                   </ParagrafosStl>
 
                   <div style={{ marginTop: "1rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                    <ParagrafosStl>• <strong>Etapa 4 (Dose Diária / Anki)</strong>: Gera flashcards por disciplina com algoritmo SM-2.</ParagrafosStl>
-                    <ParagrafosStl>• <strong>Etapa 5 (Ciclo 30/70)</strong>: Abre resumos teóricos (30%) e baterias de questões (70%) do edital selecionado.</ParagrafosStl>
-                    <ParagrafosStl>• <strong>Etapa 6 (Mini-IDE TI)</strong>: Desafios de código focados nas tecnologias do edital ativo.</ParagrafosStl>
-                    <ParagrafosStl>• <strong>Etapa 7 (Oficina de Redação)</strong>: Discursivas nos temas quentes do edital.</ParagrafosStl>
+                    <ParagrafosStl>✅ <strong>Etapa 1</strong>: Design System (Dark/Café, Styled-Components, Contraste AAA).</ParagrafosStl>
+                    <ParagrafosStl>✅ <strong>Etapa 2</strong>: Supabase (Auth com Login de Username, RLS, Painel de ADM para SirReinato).</ParagrafosStl>
+                    <ParagrafosStl>✅ <strong>Etapa 3</strong>: Mapeador de Edital & Árvore Hierárquica de Disciplinas e Tópicos.</ParagrafosStl>
+                    <ParagrafosStl>⚡ <strong>Etapa 4 (Ativa)</strong>: Dose Diária (Micro-learning, Repetição Espaçada SM-2, Streak de 5 cards diários, Flip 3D).</ParagrafosStl>
+                    <ParagrafosStl>⏳ <strong>Etapa 5 (Próxima)</strong>: Ciclo 30/70 (30% Teoria Ativa em Markdown + 70% Bateria de Questões comentadas de bancas).</ParagrafosStl>
                   </div>
                 </CardStl>
               )}
