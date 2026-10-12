@@ -7,6 +7,7 @@ import { EditalManager } from "./components/EditalManager";
 import { DailyStreakPlayer } from "./components/DailyStreakPlayer";
 import { FlashcardManager } from "./components/FlashcardManager";
 import { CicloEstudos3070 } from "./components/CicloEstudos3070";
+import { MiniIDEArena } from "./components/MiniIDEArena";
 import { editaisService, type EditalCompleto } from "./services/editaisService";
 import {
   flashcardsService,
@@ -118,8 +119,8 @@ const DashboardConteudo: React.FC = () => {
   const [supabaseConectado, setSupabaseConectado] = useState<boolean>(false);
   const [mostrarPainelAdmin, setMostrarPainelAdmin] = useState<boolean>(false);
   const [abaAtiva, setAbaAtiva] = useState<
-    "ciclo3070" | "streak" | "flashcards" | "editais" | "overview"
-  >("ciclo3070");
+    "ide" | "ciclo3070" | "streak" | "flashcards" | "editais" | "overview"
+  >("ide");
 
   // Editais
   const [editais, setEditais] = useState<EditalCompleto[]>([]);
@@ -276,10 +277,16 @@ const DashboardConteudo: React.FC = () => {
             <>
               <AbaNavegacaoContainerStl>
                 <AbaBotaoStl
+                  $ativa={abaAtiva === "ide"}
+                  onClick={() => setAbaAtiva("ide")}
+                >
+                  💻 Mini-IDE (Desafios TI)
+                </AbaBotaoStl>
+                <AbaBotaoStl
                   $ativa={abaAtiva === "ciclo3070"}
                   onClick={() => setAbaAtiva("ciclo3070")}
                 >
-                  🎯 Ciclo 30/70 (Teoria & Questões)
+                  🎯 Ciclo 30/70
                 </AbaBotaoStl>
                 <AbaBotaoStl
                   $ativa={abaAtiva === "streak"}
@@ -307,12 +314,17 @@ const DashboardConteudo: React.FC = () => {
                 </AbaBotaoStl>
               </AbaNavegacaoContainerStl>
 
-              {/* ABA NO REQUISITO: CICLO 30/70 */}
+              {/* ABA ATIVA: MINI-IDE DE CONCURSOS */}
+              {abaAtiva === "ide" && (
+                <MiniIDEArena editalAtivo={editalSelecionado} />
+              )}
+
+              {/* ABA: CICLO 30/70 */}
               {abaAtiva === "ciclo3070" && (
                 <CicloEstudos3070 editalAtivo={editalSelecionado} />
               )}
 
-              {/* ABA 2: SESSÃO DIÁRIA INTERATIVA */}
+              {/* ABA: SESSÃO DIÁRIA INTERATIVA */}
               {abaAtiva === "streak" && (
                 <DailyStreakPlayer
                   cards={cards}
@@ -322,7 +334,7 @@ const DashboardConteudo: React.FC = () => {
                 />
               )}
 
-              {/* ABA 3: GERENCIAMENTO DE CARDS */}
+              {/* ABA: GERENCIAMENTO DE CARDS */}
               {abaAtiva === "flashcards" && (
                 <FlashcardManager
                   editalAtivo={editalSelecionado}
@@ -331,7 +343,7 @@ const DashboardConteudo: React.FC = () => {
                 />
               )}
 
-              {/* ABA 4: GESTÃO DE EDITAIS */}
+              {/* ABA: GESTÃO DE EDITAIS */}
               {abaAtiva === "editais" && (
                 <EditalManager
                   editais={editais}
@@ -341,7 +353,7 @@ const DashboardConteudo: React.FC = () => {
                 />
               )}
 
-              {/* ABA 5: VISÃO GERAL */}
+              {/* ABA: VISÃO GERAL */}
               {abaAtiva === "overview" && (
                 <CardStl $destaqueBorda style={{ maxWidth: "1100px", margin: "1rem 0" }}>
                   <TitulosSecundariosStl>Ciclo de Estudos TI em Andamento</TitulosSecundariosStl>
@@ -354,8 +366,9 @@ const DashboardConteudo: React.FC = () => {
                     <ParagrafosStl>✅ <strong>Etapa 2</strong>: Supabase (Auth com Login de Username, RLS, Painel de ADM para SirReinato).</ParagrafosStl>
                     <ParagrafosStl>✅ <strong>Etapa 3</strong>: Mapeador de Edital & Árvore Hierárquica de Disciplinas e Tópicos.</ParagrafosStl>
                     <ParagrafosStl>✅ <strong>Etapa 4</strong>: Dose Diária (Micro-learning, Repetição Espaçada SM-2, Streak de 5 cards diários, Flip 3D).</ParagrafosStl>
-                    <ParagrafosStl>⚡ <strong>Etapa 5 (Ativa)</strong>: Ciclo 30/70 (30% Teoria Ativa em Markdown + 70% Bateria de Questões comentadas de bancas).</ParagrafosStl>
-                    <ParagrafosStl>⏳ <strong>Etapa 6 (Próxima)</strong>: Mini-IDE & Desafios Práticos de Código para TI (SQL, Python, JS).</ParagrafosStl>
+                    <ParagrafosStl>✅ <strong>Etapa 5</strong>: Ciclo 30/70 (30% Teoria Ativa em Markdown + 70% Bateria de Questões comentadas de bancas).</ParagrafosStl>
+                    <ParagrafosStl>⚡ <strong>Etapa 6 (Ativa)</strong>: Mini-IDE & Desafios Práticos de Código para TI (SQL, Python, JS).</ParagrafosStl>
+                    <ParagrafosStl>⏳ <strong>Etapa 7 (Próxima)</strong>: Laboratório de Redação & Discursivas Técnicas de TI.</ParagrafosStl>
                   </div>
                 </CardStl>
               )}
