@@ -5,10 +5,12 @@ import {
   TitulosSecundariosStl,
   ParagrafosStl,
   BotaoPrimarioStl,
+  BotaoSecundarioStl,
   CardStl,
   BadgeStl,
 } from "../theme/theme";
 import type { FlashcardComTopico } from "../services/flashcardsService";
+import { useEdital } from "../contexts/EditalContext";
 
 const FlashcardCenaStl = styled.div`
   width: 100%;
@@ -119,11 +121,20 @@ export const DailyStreakPlayer: React.FC<Props> = ({
   cardsRevisadosHoje,
   metaDiaria,
 }) => {
+  const { editalAtivo, topicoIdsEditalAtivo } = useEdital();
+  const [filtrarPorEdital, setFiltrarPorEdital] = useState<boolean>(true);
   const [indiceAtual, setIndiceAtual] = useState(0);
   const [virado, setVirado] = useState(false);
   const [processando, setProcessando] = useState(false);
 
-  const cardAtual = cards[indiceAtual];
+  // Filtra cards pertencentes ao edital ativo se houver
+  const cardsParaEstudo = React.useMemo(() => {
+    if (!filtrarPorEdital || !editalAtivo) return cards;
+    const filtrados = cards.filter((c) => !c.topico_id || topicoIdsEditalAtivo.has(c.topico_id));
+    return filtrados;
+  }, [cards, filtrarPorEdital, editalAtivo, topicoIdsEditalAtivo]);
+
+  const cardAtual = cardsParaEstudo[indiceAtual] || cardsParaEstudo[0];
   const progressoMeta = Math.min(100, Math.round((cardsRevisadosHoje / metaDiaria) * 100));
 
   const handleAvaliar = async (qualidade: 0 | 3 | 4 | 5) => {
@@ -132,7 +143,7 @@ export const DailyStreakPlayer: React.FC<Props> = ({
     await onResponder(cardAtual, qualidade);
     setVirado(false);
 
-    if (indiceAtual + 1 < cards.length) {
+    if (indiceAtual + 1 < cardsParaEstudo.length) {
       setIndiceAtual((prev) => prev + 1);
     } else {
       setIndiceAtual(0); // Reinicia ou finaliza a sessão
@@ -140,18 +151,31 @@ export const DailyStreakPlayer: React.FC<Props> = ({
     setProcessando(false);
   };
 
-  if (!cards || cards.length === 0) {
+  if (!cardsParaEstudo || cardsParaEstudo.length === 0) {
     return (
       <CardStl $destaqueBorda style={{ maxWidth: "700px", margin: "1.5rem auto", textAlign: "center" }}>
         <BadgeStl>Revisão Concluída</BadgeStl>
         <TitulosSecundariosStl style={{ marginTop: "1rem" }}>
-          🎉 Nenhum Flashcard Pendente para Hoje!
+          {filtrarPorEdital && editalAtivo && cards.length > 0
+            ? `🎉 Nenhum Flashcard Cadastrado para "${editalAtivo.titulo}"!`
+            : "🎉 Nenhum Flashcard Pendente para Hoje!"}
         </TitulosSecundariosStl>
         <ParagrafosStl $secundario style={{ marginTop: "0.5rem" }}>
-          Você já revisou seus cards ou ainda não cadastrou nenhum na árvore de matérias.
+          {filtrarPorEdital && editalAtivo && cards.length > 0
+            ? `Você possui ${cards.length} cards em outros editais ou gerais. Você pode mudar para outro edital ou desativar o filtro abaixo.`
+            : "Você já revisou seus cards ou ainda não cadastrou nenhum na árvore de matérias."}
         </ParagrafosStl>
-        <div style={{ marginTop: "1.5rem" }}>
+
+        <div style={{ marginTop: "1.5rem", display: "flex", justifyContent: "center", gap: "0.75rem", flexWrap: "wrap" }}>
           <BadgeStl>Streak: {cardsRevisadosHoje}/{metaDiaria} Cards hoje</BadgeStl>
+          {editalAtivo && cards.length > 0 && (
+            <BotaoSecundarioStl
+              style={{ fontSize: "0.8rem" }}
+              onClick={() => setFiltrarPorEdital(!filtrarPorEdital)}
+            >
+              {filtrarPorEdital ? "👁️ Estudar Todos os Cards da Conta" : "🎯 Filtrar pelo Edital Ativo"}
+            </BotaoSecundarioStl>
+          )}
         </div>
       </CardStl>
     );
@@ -161,9 +185,25 @@ export const DailyStreakPlayer: React.FC<Props> = ({
     <div style={{ width: "100%", maxWidth: "750px", margin: "1rem auto" }}>
       {/* Barra de Streak e Meta Diária */}
       <CardStl style={{ marginBottom: "1rem" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
           <div>
-            <BadgeStl>🔥 Streak de Estudos</BadgeStl>
+            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+              <BadgeStl>🔥 Streak de Estudos</BadgeStl>
+              {editalAtivo && (
+                <span
+                  style={{
+                    fontSize: "0.75rem",
+                    padding: "2px 8px",
+                    borderRadius: "8px",
+                    backgroundColor: "rgba(65, 45, 21, 0.6)",
+                    border: "1px solid rgba(225, 220, 201, 0.2)",
+                    color: theme.colors.textos.claroPrincipal,
+                  }}
+                >
+                  🎯 Edital: <strong>{editalAtivo.titulo}</strong> ({editalAtivo.banca})
+                </span>
+              )}
+            </div>
             <TitulosSecundariosStl style={{ fontSize: "1.2rem", marginTop: "0.3rem" }}>
               Meta Diária: {cardsRevisadosHoje} de {metaDiaria} cards
             </TitulosSecundariosStl>

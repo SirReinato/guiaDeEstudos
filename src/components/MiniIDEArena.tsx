@@ -15,6 +15,8 @@ import {
   desafiosCodigoService,
   type DesafioComTopico,
 } from "../services/desafiosCodigoService";
+import { geminiService } from "../services/geminiService";
+import { useEdital } from "../contexts/EditalContext";
 import type { EditalCompleto } from "../services/editaisService";
 import { validarCodigoDesafio, type ValidacaoResultado } from "../utils/codeValidator";
 
@@ -93,12 +95,18 @@ const SelectStl = styled.select`
   box-sizing: border-box;
 `;
 
-export const MiniIDEArena: React.FC<{ editalAtivo?: EditalCompleto | null }> = () => {
+export const MiniIDEArena: React.FC<{ editalAtivo?: EditalCompleto | null }> = ({
+  editalAtivo: propEditalAtivo,
+}) => {
+  const { editalAtivo: ctxEditalAtivo } = useEdital();
+  const editalAtivo = propEditalAtivo !== undefined ? propEditalAtivo : ctxEditalAtivo;
+
   const [desafios, setDesafios] = useState<DesafioComTopico[]>([]);
   const [desafioAtivoId, setDesafioAtivoId] = useState<string>("");
   const [codigoUsuario, setCodigoUsuario] = useState<string>("");
   const [resultadoValidacao, setResultadoValidacao] = useState<ValidacaoResultado | null>(null);
   const [verificando, setVerificando] = useState<boolean>(false);
+  const [gerandoDesafioIA, setGerandoDesafioIA] = useState<boolean>(false);
 
   // Carregar lista de desafios
   const carregarDesafios = async () => {
@@ -126,6 +134,52 @@ export const MiniIDEArena: React.FC<{ editalAtivo?: EditalCompleto | null }> = (
       setCodigoUsuario(escolhido.codigo_inicial);
     }
     setResultadoValidacao(null);
+  };
+
+  // Gerar Desafio de Código via IA no Estilo da Banca do Edital Ativo
+  const handleGerarDesafioComIA = async (linguagem: "sql" | "python" | "javascript") => {
+    if (!geminiService.temChave()) {
+      alert("Chave Gemini API não detectada no .env.");
+      return;
+    }
+
+    setGerandoDesafioIA(true);
+    try {
+      const banca = editalAtivo?.banca || "Cebraspe";
+      const topicosTI =
+        editalAtivo?.disciplinas
+          ?.flatMap((d) => (d.topicos || []).map((t) => t.titulo))
+          .join(", ") || "";
+
+      const novo = await geminiService.gerarDesafioCodigoParaEdital({
+        banca,
+        linguagem,
+        topico: topicosTI ? `Tópicos do edital: ${topicosTI.slice(0, 300)}` : undefined,
+      });
+
+      if (novo) {
+        const primeiroTopicoId = editalAtivo?.disciplinas?.[0]?.topicos?.[0]?.id || null;
+        const { data: criado } = await desafiosCodigoService.criarDesafio({
+          topicoId: primeiroTopicoId,
+          titulo: `${novo.titulo} (${banca})`,
+          linguagem,
+          enunciado: novo.enunciado,
+          codigoInicial: novo.codigoInicial,
+          solucaoEsperada: novo.solucaoEsperada,
+          dicas: novo.dicas,
+        });
+
+        if (criado) {
+          await carregarDesafios();
+          handleMudarDesafio(criado.id);
+          alert(`✨ Novo desafio prático de ${linguagem.toUpperCase()} criado para a banca ${banca}!`);
+        }
+      }
+    } catch (err: any) {
+      alert(`Falha ao gerar desafio: ${err?.message || "Tente novamente"}`);
+    } finally {
+      setGerandoDesafioIA(false);
+    }
   };
 
   // Semear exemplos de TI clássicos de concurso
@@ -226,7 +280,23 @@ FROM funcionarios
       <CardStl $destaqueBorda style={{ padding: "1rem 1.5rem" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
           <div>
-            <BadgeStl>Etapa 6 • Dev & TI Arena</BadgeStl>
+            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+              <BadgeStl>Dev & TI Arena</BadgeStl>
+              {editalAtivo && (
+                <span
+                  style={{
+                    fontSize: "0.75rem",
+                    padding: "2px 8px",
+                    borderRadius: "8px",
+                    backgroundColor: "rgba(65, 45, 21, 0.6)",
+                    border: "1px solid rgba(225, 220, 201, 0.2)",
+                    color: theme.colors.textos.claroPrincipal,
+                  }}
+                >
+                  🎯 Edital: <strong>{editalAtivo.titulo}</strong> ({editalAtivo.banca})
+                </span>
+              )}
+            </div>
             <TitulosSecundariosStl style={{ fontSize: "1.25rem", marginTop: "0.25rem" }}>
               Mini-IDE: Prática de Código para Concursos de TI
             </TitulosSecundariosStl>
@@ -246,8 +316,24 @@ FROM funcionarios
               </SelectStl>
             )}
 
+            <BotaoPrimarioStl
+              style={{ fontSize: "0.8rem", padding: "0.45rem 0.9rem" }}
+              onClick={() => handleGerarDesafioComIA("sql")}
+              disabled={gerandoDesafioIA}
+            >
+              {gerandoDesafioIA ? "⏳ Criando..." : "✨ Gerar SQL com IA"}
+            </BotaoPrimarioStl>
+
+            <BotaoPrimarioStl
+              style={{ fontSize: "0.8rem", padding: "0.45rem 0.9rem" }}
+              onClick={() => handleGerarDesafioComIA("python")}
+              disabled={gerandoDesafioIA}
+            >
+              {gerandoDesafioIA ? "⏳ Criando..." : "✨ Gerar Python com IA"}
+            </BotaoPrimarioStl>
+
             <BotaoSecundarioStl style={{ fontSize: "0.8rem" }} onClick={handleSemearDesafiosDemonstracao}>
-              ⚡ Carregar 3 Desafios Clássicos de TI
+              ⚡ 3 Exemplos TI
             </BotaoSecundarioStl>
           </div>
         </div>

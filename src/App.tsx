@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useCallback } from "react";
 import styled from "styled-components";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { EditalProvider, useEdital } from "./contexts/EditalContext";
 import { AuthModal } from "./components/AuthModal";
 import { AdminPanel } from "./components/AdminPanel";
+import { EditalSelectorBar } from "./components/EditalSelectorBar";
 import { EditalManager } from "./components/EditalManager";
 import { DailyStreakPlayer } from "./components/DailyStreakPlayer";
 import { FlashcardManager } from "./components/FlashcardManager";
 import { CicloEstudos3070 } from "./components/CicloEstudos3070";
 import { MiniIDEArena } from "./components/MiniIDEArena";
 import { RedacaoLaboratorio } from "./components/RedacaoLaboratorio";
-import { editaisService, type EditalCompleto } from "./services/editaisService";
 import {
   flashcardsService,
   type FlashcardComTopico,
@@ -117,34 +118,17 @@ const BloqueioAvisoStl = styled.div`
 
 const DashboardConteudo: React.FC = () => {
   const { user, profile, signOut, loading } = useAuth();
+  const { editais, editalAtivo, selecionarEdital, carregarEditais } = useEdital();
   const [supabaseConectado, setSupabaseConectado] = useState<boolean>(false);
   const [mostrarPainelAdmin, setMostrarPainelAdmin] = useState<boolean>(false);
   const [abaAtiva, setAbaAtiva] = useState<
     "redacao" | "ide" | "ciclo3070" | "streak" | "flashcards" | "editais" | "overview"
   >("redacao");
 
-  // Editais
-  const [editais, setEditais] = useState<EditalCompleto[]>([]);
-  const [editalSelecionado, setEditalSelecionado] = useState<EditalCompleto | null>(null);
-
   // Flashcards & Streak
   const [cards, setCards] = useState<FlashcardComTopico[]>([]);
   const [cardsRevisadosHoje, setCardsRevisadosHoje] = useState<number>(0);
   const META_DIARIA = 5;
-
-  const carregarEditais = useCallback(async () => {
-    if (!user) return;
-    const { data } = await editaisService.listarEditais();
-    if (data) {
-      setEditais(data);
-      if (editalSelecionado) {
-        const atualizado = data.find((e) => e.id === editalSelecionado.id) || null;
-        setEditalSelecionado(atualizado);
-      } else if (data.length > 0) {
-        setEditalSelecionado(data[0]);
-      }
-    }
-  }, [user, editalSelecionado]);
 
   const carregarFlashcards = useCallback(async () => {
     if (!user) return;
@@ -172,10 +156,9 @@ const DashboardConteudo: React.FC = () => {
 
   useEffect(() => {
     if (user) {
-      carregarEditais();
       carregarFlashcards();
     }
-  }, [user, carregarEditais, carregarFlashcards]);
+  }, [user, carregarFlashcards]);
 
   const handleResponderCard = async (card: FlashcardComTopico, qualidade: 0 | 3 | 4 | 5) => {
     await flashcardsService.responderFlashcard(card, qualidade);
@@ -276,6 +259,9 @@ const DashboardConteudo: React.FC = () => {
           {/* Navegação e Conteúdo de Estudos */}
           {!isPending && !isRejected && (
             <>
+              {/* Barra Fixa Global de Seleção e Foco do Edital */}
+              <EditalSelectorBar onAbrirAbaEditais={() => setAbaAtiva("editais")} />
+
               <AbaNavegacaoContainerStl>
                 <AbaBotaoStl
                   $ativa={abaAtiva === "redacao"}
@@ -323,17 +309,17 @@ const DashboardConteudo: React.FC = () => {
 
               {/* ABA ATIVA: OFICINA DE DISCURSIVAS */}
               {abaAtiva === "redacao" && (
-                <RedacaoLaboratorio editalAtivo={editalSelecionado} />
+                <RedacaoLaboratorio editalAtivo={editalAtivo} />
               )}
 
               {/* ABA: MINI-IDE DE CONCURSOS */}
               {abaAtiva === "ide" && (
-                <MiniIDEArena editalAtivo={editalSelecionado} />
+                <MiniIDEArena editalAtivo={editalAtivo} />
               )}
 
               {/* ABA: CICLO 30/70 */}
               {abaAtiva === "ciclo3070" && (
-                <CicloEstudos3070 editalAtivo={editalSelecionado} />
+                <CicloEstudos3070 editalAtivo={editalAtivo} />
               )}
 
               {/* ABA: SESSÃO DIÁRIA INTERATIVA */}
@@ -349,7 +335,7 @@ const DashboardConteudo: React.FC = () => {
               {/* ABA: GERENCIAMENTO DE CARDS */}
               {abaAtiva === "flashcards" && (
                 <FlashcardManager
-                  editalAtivo={editalSelecionado}
+                  editalAtivo={editalAtivo}
                   cards={cards}
                   onRecarregar={carregarFlashcards}
                 />
@@ -360,8 +346,8 @@ const DashboardConteudo: React.FC = () => {
                 <EditalManager
                   editais={editais}
                   onRecarregar={carregarEditais}
-                  editalSelecionado={editalSelecionado}
-                  onSelecionarEdital={(e) => setEditalSelecionado(e)}
+                  editalSelecionado={editalAtivo}
+                  onSelecionarEdital={(e) => e && selecionarEdital(e.id)}
                 />
               )}
 
@@ -370,18 +356,19 @@ const DashboardConteudo: React.FC = () => {
                 <CardStl $destaqueBorda style={{ maxWidth: "1100px", margin: "1rem 0" }}>
                   <TitulosSecundariosStl>Ciclo de Estudos TI em Andamento</TitulosSecundariosStl>
                   <ParagrafosStl $secundario style={{ marginTop: "0.5rem" }}>
-                    Status atual do projeto:
+                    Status atual da plataforma Guia de Estudos TI:
                   </ParagrafosStl>
 
                   <div style={{ marginTop: "1rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                     <ParagrafosStl>✅ <strong>Etapa 1</strong>: Design System (Dark/Café, Styled-Components, Contraste AAA).</ParagrafosStl>
                     <ParagrafosStl>✅ <strong>Etapa 2</strong>: Supabase (Auth com Login de Username, RLS, Painel de ADM para SirReinato).</ParagrafosStl>
-                    <ParagrafosStl>✅ <strong>Etapa 3</strong>: Mapeador de Edital & Árvore Hierárquica de Disciplinas e Tópicos.</ParagrafosStl>
+                    <ParagrafosStl>✅ <strong>Etapa 3</strong>: Mapeador de Edital & Árvore Hierárquica de Disciplinas e Tópicos (Pesos 1 a 5 estrelas).</ParagrafosStl>
                     <ParagrafosStl>✅ <strong>Etapa 4</strong>: Dose Diária (Micro-learning, Repetição Espaçada SM-2, Streak de 5 cards diários, Flip 3D).</ParagrafosStl>
-                    <ParagrafosStl>✅ <strong>Etapa 5</strong>: Ciclo 30/70 (30% Teoria Ativa em Markdown + 70% Bateria de Questões comentadas de bancas).</ParagrafosStl>
+                    <ParagrafosStl>✅ <strong>Etapa 5</strong>: Ciclo 30/70 (30% Teoria Ativa em Markdown + 70% Bateria de Questões comentadas).</ParagrafosStl>
                     <ParagrafosStl>✅ <strong>Etapa 6</strong>: Mini-IDE & Desafios Práticos de Código para TI (SQL, Python, JS com Monaco Editor).</ParagrafosStl>
-                    <ParagrafosStl>⚡ <strong>Etapa 7 (Ativa)</strong>: Laboratório de Redação & Discursivas Técnicas de TI (Folha Pautada, Limite de Linhas, Espelho Oficial).</ParagrafosStl>
-                    <ParagrafosStl>⏳ <strong>Etapa 8 (Final)</strong>: Inteligência Artificial (Google Gemini API) & Publicação na Vercel.</ParagrafosStl>
+                    <ParagrafosStl>✅ <strong>Etapa 7</strong>: Laboratório de Redação & Discursivas Técnicas de TI (Folha Pautada, Limite de Linhas, Espelho Oficial).</ParagrafosStl>
+                    <ParagrafosStl>✅ <strong>Etapa 8</strong>: Inteligência Artificial (Google Gemini 3.8 Flash, Extração de PDF e Provas Anteriores).</ParagrafosStl>
+                    <ParagrafosStl>🚀 <strong>Modo Edital Centralizado</strong>: Todos os módulos filtram, adaptam bancas e geram questões com IA sincronizados ao Edital Ativo.</ParagrafosStl>
                   </div>
                 </CardStl>
               )}
@@ -398,7 +385,9 @@ const DashboardConteudo: React.FC = () => {
 export const App: React.FC = () => {
   return (
     <AuthProvider>
-      <DashboardConteudo />
+      <EditalProvider>
+        <DashboardConteudo />
+      </EditalProvider>
     </AuthProvider>
   );
 };

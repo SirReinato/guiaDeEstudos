@@ -224,4 +224,141 @@ Responda OBRIGATORIAMENTE em JSON válido:
       return null;
     }
   },
+
+  // 3. Gerar Flashcards Inteligentes para Tópico do Edital
+  async gerarFlashcardsParaTopico(payload: {
+    disciplina: string;
+    topico: string;
+    banca?: string;
+    quantidade?: number;
+  }): Promise<Array<{ frente: string; verso: string }> | null> {
+    const key = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!key) return null;
+
+    const ai = new GoogleGenAI({ apiKey: key });
+    const qtd = payload.quantidade || 3;
+
+    const prompt = `Você é um professor especialista em preparação para concursos de TI.
+Crie ${qtd} flashcards de repetição espaçada (formato Pergunta/Resposta ou Conceito/Definição) focados no tópico "${payload.topico}" da disciplina "${payload.disciplina}".
+Estilo de banca: "${payload.banca || "Geral / Cebraspe / FGV"}".
+Priorize os pontos mais cobrados em prova, conceitos cruciais, pegadinhas recorrentes e regras fundamentais.
+O texto da 'frente' deve ser uma pergunta ou provocação direta, e o 'verso' uma explicação clara, técnica e concisa.
+
+Responda OBRIGATORIAMENTE em JSON:
+{
+  "flashcards": [
+    {
+      "frente": "Pergunta ou provocação de prova...",
+      "verso": "Resposta técnica fundamentada..."
+    }
+  ]
+}`;
+
+    const response = await chamarGeminiComRetry(ai, {
+      model: "gemini-3.8-flash",
+      contents: prompt,
+      config: { responseMimeType: "application/json" },
+    });
+
+    try {
+      const parsed = JSON.parse(response.text || "{}");
+      return parsed.flashcards || null;
+    } catch (err) {
+      console.error("Erro ao converter JSON de flashcards:", err);
+      return null;
+    }
+  },
+
+  // 4. Gerar Desafio Prático de Código Alinhado ao Edital
+  async gerarDesafioCodigoParaEdital(payload: {
+    banca: string;
+    linguagem: "sql" | "python" | "javascript";
+    topico?: string;
+  }): Promise<{
+    titulo: string;
+    enunciado: string;
+    codigoInicial: string;
+    solucaoEsperada: string;
+    dicas: string[];
+  } | null> {
+    const key = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!key) return null;
+
+    const ai = new GoogleGenAI({ apiKey: key });
+
+    const prompt = `Você é um elaborador de provas práticas de código para concursos públicos de TI (banca: ${payload.banca}).
+Elabore 1 desafio de programação prático na linguagem "${payload.linguagem}"${payload.topico ? ` focado no tópico "${payload.topico}"` : ""}.
+O desafio deve ter nível de concurso público (estilo prova discursiva/prática de Bacen, TCU, Dataprev, BB TI).
+Forneça o esqueleto inicial de código para o candidato completar e a solução esperada.
+
+Responda OBRIGATORIAMENTE em JSON válido:
+{
+  "titulo": "Título conciso do desafio...",
+  "enunciado": "Descrição detalhada do problema com requisitos claros...",
+  "codigoInicial": "Esqueleto de código inicial...",
+  "solucaoEsperada": "Código completo esperado da solução...",
+  "dicas": ["Dica 1", "Dica 2"]
+}`;
+
+    const response = await chamarGeminiComRetry(ai, {
+      model: "gemini-3.8-flash",
+      contents: prompt,
+      config: { responseMimeType: "application/json" },
+    });
+
+    try {
+      return JSON.parse(response.text || "{}");
+    } catch (err) {
+      console.error("Erro ao converter JSON de desafio:", err);
+      return null;
+    }
+  },
+
+  // 5. Gerar Tema de Discursiva com Espelho de Resposta Oficial do Edital
+  async gerarTemaDiscursivaParaEdital(payload: {
+    banca: string;
+    orgao?: string;
+    topicosPrincipais: string[];
+  }): Promise<{
+    titulo: string;
+    enunciado: string;
+    limiteLinhas: number;
+    padraoResposta: string;
+  } | null> {
+    const key = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!key) return null;
+
+    const ai = new GoogleGenAI({ apiKey: key });
+
+    const prompt = `Você é a banca examinadora oficial (${payload.banca}) para o concurso ${payload.orgao ? `do(a) ${payload.orgao}` : "de Tecnologia da Informação"}.
+Crie um tema de questão discursiva técnica inédita de alto nível abordando um ou mais dos seguintes tópicos do edital:
+${payload.topicosPrincipais.join(", ")}
+
+Requisitos da questão:
+- O enunciado deve conter uma situação-problema e listar exatamente 3 tópicos numerados obrigatórios que o candidato deve discorrer.
+- Limite estrito de 30 linhas.
+- O 'padraoResposta' deve ser o espelho oficial de correção da banca, detalhando os pontos esperados para cada um dos 3 itens e os critérios de pontuação.
+
+Responda OBRIGATORIAMENTE em JSON válido:
+{
+  "titulo": "Título do tema...",
+  "enunciado": "Texto do estudo de caso com os 3 itens numerados...",
+  "limiteLinhas": 30,
+  "padraoResposta": "Espelho de correção oficial da banca com fundamentação detalhada..."
+}`;
+
+    const response = await chamarGeminiComRetry(ai, {
+      model: "gemini-3.8-flash",
+      contents: prompt,
+      config: { responseMimeType: "application/json" },
+    });
+
+    try {
+      return JSON.parse(response.text || "{}");
+    } catch (err) {
+      console.error("Erro ao converter JSON de tema discursivo:", err);
+      return null;
+    }
+  },
 };
+

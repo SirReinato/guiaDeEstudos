@@ -14,6 +14,8 @@ import {
   redacoesService,
   type TemaRedacaoComDetalhes,
 } from "../services/redacoesService";
+import { geminiService } from "../services/geminiService";
+import { useEdital } from "../contexts/EditalContext";
 import type { EditalCompleto } from "../services/editaisService";
 
 const LayoutLaboratorioStl = styled.div`
@@ -128,13 +130,19 @@ interface Props {
   editalAtivo?: EditalCompleto | null;
 }
 
-export const RedacaoLaboratorio: React.FC<Props> = () => {
+export const RedacaoLaboratorio: React.FC<Props> = ({
+  editalAtivo: propEditalAtivo,
+}) => {
+  const { editalAtivo: ctxEditalAtivo } = useEdital();
+  const editalAtivo = propEditalAtivo !== undefined ? propEditalAtivo : ctxEditalAtivo;
+
   const [temas, setTemas] = useState<TemaRedacaoComDetalhes[]>([]);
   const [temaAtivoId, setTemaAtivoId] = useState<string>("");
   const [textoRedacao, setTextoRedacao] = useState<string>("");
   const [mostrarEspelho, setMostrarEspelho] = useState<boolean>(false);
   const [tempoSegundos, setTempoSegundos] = useState<number>(0);
   const [cronometroAtivo, setCronometroAtivo] = useState<boolean>(false);
+  const [gerandoTemaIA, setGerandoTemaIA] = useState<boolean>(false);
 
   // Carregar temas de redação
   const carregarTemas = async () => {
@@ -144,6 +152,66 @@ export const RedacaoLaboratorio: React.FC<Props> = () => {
       if (!temaAtivoId) {
         setTemaAtivoId(data[0].id);
       }
+    }
+  };
+
+  // Gerar Tema Discursivo com IA baseado nas matérias de alta relevância do Edital Ativo
+  const handleGerarTemaComIA = async () => {
+    if (!geminiService.temChave()) {
+      alert("Chave Gemini API não detectada no .env.");
+      return;
+    }
+
+    setGerandoTemaIA(true);
+    try {
+      const banca = editalAtivo?.banca || "Cebraspe";
+      const orgao = editalAtivo?.orgao || editalAtivo?.titulo || "Tribunal de Contas / Bacen";
+
+      // Filtra tópicos com peso de 3 a 5 estrelas
+      const topicosPrioritarios =
+        editalAtivo?.disciplinas
+          ?.flatMap((d) =>
+            (d.topicos || [])
+              .filter((t) => (t.relevancia_banca || 0) >= 3)
+              .map((t) => `${d.nome} - ${t.titulo}`)
+          ) || [];
+
+      const listaTopicos =
+        topicosPrioritarios.length > 0
+          ? topicosPrioritarios.slice(0, 5)
+          : [
+              "Arquitetura de Microsserviços e Padrões de Resiliência",
+              "Bancos de Dados Relacionais e Não-Relacionais (NoSQL)",
+              "Segurança da Informação, DevSecOps e OWASP Top 10",
+            ];
+
+      const novo = await geminiService.gerarTemaDiscursivaParaEdital({
+        banca,
+        orgao,
+        topicosPrincipais: listaTopicos,
+      });
+
+      if (novo) {
+        const primeiroTopicoId = editalAtivo?.disciplinas?.[0]?.topicos?.[0]?.id || null;
+        const { data: criado } = await redacoesService.criarTema({
+          topicoId: primeiroTopicoId,
+          titulo: `${novo.titulo} (${banca})`,
+          enunciado: novo.enunciado,
+          limiteLinhas: novo.limiteLinhas || 30,
+          padraoResposta: novo.padraoResposta,
+        });
+
+        if (criado) {
+          await carregarTemas();
+          setTemaAtivoId(criado.id);
+          setMostrarEspelho(false);
+          alert(`✨ Novo tema discursivo inédito criado no padrão oficial da banca ${banca}!`);
+        }
+      }
+    } catch (err: any) {
+      alert(`Falha ao gerar tema discursivo: ${err?.message || "Tente novamente"}`);
+    } finally {
+      setGerandoTemaIA(false);
     }
   };
 
@@ -232,7 +300,23 @@ export const RedacaoLaboratorio: React.FC<Props> = () => {
       <CardStl $destaqueBorda style={{ padding: "1rem 1.5rem" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
           <div>
-            <BadgeStl>Etapa 7 • Oficina de Discursivas TI</BadgeStl>
+            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+              <BadgeStl>Oficina de Discursivas TI</BadgeStl>
+              {editalAtivo && (
+                <span
+                  style={{
+                    fontSize: "0.75rem",
+                    padding: "2px 8px",
+                    borderRadius: "8px",
+                    backgroundColor: "rgba(65, 45, 21, 0.6)",
+                    border: "1px solid rgba(225, 220, 201, 0.2)",
+                    color: theme.colors.textos.claroPrincipal,
+                  }}
+                >
+                  🎯 Edital: <strong>{editalAtivo.titulo}</strong> ({editalAtivo.banca})
+                </span>
+              )}
+            </div>
             <TitulosSecundariosStl style={{ fontSize: "1.25rem", marginTop: "0.25rem" }}>
               Simulador de Prova Discursiva & Redação Técnica
             </TitulosSecundariosStl>
@@ -255,8 +339,16 @@ export const RedacaoLaboratorio: React.FC<Props> = () => {
               </SelectStl>
             )}
 
+            <BotaoPrimarioStl
+              style={{ fontSize: "0.8rem", padding: "0.45rem 0.9rem" }}
+              onClick={handleGerarTemaComIA}
+              disabled={gerandoTemaIA}
+            >
+              {gerandoTemaIA ? "⏳ Criando Discursiva..." : "✨ Gerar Discursiva com IA"}
+            </BotaoPrimarioStl>
+
             <BotaoSecundarioStl style={{ fontSize: "0.8rem" }} onClick={handleSemearTemasTI}>
-              ⚡ Carregar Temas de TI (TCU/DevSecOps)
+              ⚡ 2 Exemplos TI
             </BotaoSecundarioStl>
           </div>
         </div>

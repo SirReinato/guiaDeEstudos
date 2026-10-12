@@ -11,6 +11,7 @@ import {
 } from "../theme/theme";
 import { editaisService, type EditalCompleto } from "../services/editaisService";
 import { useAuth } from "../contexts/AuthContext";
+import { useEdital } from "../contexts/EditalContext";
 import { extrairTextoDeArquivo } from "../utils/pdfExtractor";
 import { geminiService } from "../services/geminiService";
 
@@ -166,19 +167,37 @@ const InsightBoxStl = styled.div`
 `;
 
 interface Props {
-  editais: EditalCompleto[];
-  onRecarregar: () => void;
-  editalSelecionado: EditalCompleto | null;
-  onSelecionarEdital: (edital: EditalCompleto | null) => void;
+  editais?: EditalCompleto[];
+  onRecarregar?: () => void;
+  editalSelecionado?: EditalCompleto | null;
+  onSelecionarEdital?: (edital: EditalCompleto | null) => void;
 }
 
 export const EditalManager: React.FC<Props> = ({
-  editais,
-  onRecarregar,
-  editalSelecionado,
-  onSelecionarEdital,
+  editais: propEditais,
+  onRecarregar: propOnRecarregar,
+  editalSelecionado: propEditalSelecionado,
+  onSelecionarEdital: propOnSelecionarEdital,
 }) => {
   const { user } = useAuth();
+  const {
+    editais: ctxEditais,
+    editalAtivo: ctxEditalAtivo,
+    selecionarEdital: ctxSelecionarEdital,
+    carregarEditais: ctxCarregarEditais,
+  } = useEdital();
+
+  const editais = propEditais !== undefined ? propEditais : ctxEditais;
+  const editalSelecionado = propEditalSelecionado !== undefined ? propEditalSelecionado : ctxEditalAtivo;
+  const onRecarregar = propOnRecarregar || ctxCarregarEditais;
+  const onSelecionarEdital = (ed: EditalCompleto | null) => {
+    if (ed) {
+      ctxSelecionarEdital(ed.id);
+    }
+    if (propOnSelecionarEdital) {
+      propOnSelecionarEdital(ed);
+    }
+  };
   const [novoTitulo, setNovoTitulo] = useState("");
   const [novaBanca, setNovaBanca] = useState("Cebraspe");
   const [novoOrgao, setNovoOrgao] = useState("");

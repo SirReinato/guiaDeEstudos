@@ -15,6 +15,7 @@ import {
   type QuestaoComDetalhes,
 } from "../services/cicloEstudosService";
 import { geminiService } from "../services/geminiService";
+import { useEdital } from "../contexts/EditalContext";
 import type { EditalCompleto } from "../services/editaisService";
 import type { TeoriaResumo } from "../types/database";
 
@@ -206,10 +207,13 @@ const ComentarioGabaritoStl = styled.div<{ $acertou: boolean }>`
 `;
 
 interface Props {
-  editalAtivo: EditalCompleto | null;
+  editalAtivo?: EditalCompleto | null;
 }
 
-export const CicloEstudos3070: React.FC<Props> = ({ editalAtivo }) => {
+export const CicloEstudos3070: React.FC<Props> = ({ editalAtivo: propEditalAtivo }) => {
+  const { editalAtivo: ctxEditalAtivo } = useEdital();
+  const editalAtivo = propEditalAtivo !== undefined ? propEditalAtivo : ctxEditalAtivo;
+
   // Lista todos os tópicos disponíveis no edital ativo
   const topicosDisponiveis =
     editalAtivo?.disciplinas?.flatMap((d) =>
@@ -223,10 +227,17 @@ export const CicloEstudos3070: React.FC<Props> = ({ editalAtivo }) => {
   const [questoesReveladas, setQuestoesReveladas] = useState<{ [questaoId: string]: boolean }>({});
   const [placar, setPlacar] = useState<{ acertos: number; total: number }>({ acertos: 0, total: 0 });
 
-  // Seleciona o primeiro tópico por padrão se existir
+  // Sincroniza seleção de tópico quando muda o edital ativo
   useEffect(() => {
-    if (topicosDisponiveis.length > 0 && !topicoSelecionadoId) {
-      setTopicoSelecionadoId(topicosDisponiveis[0].id);
+    if (topicosDisponiveis.length > 0) {
+      const existeNoEdital = topicosDisponiveis.some((t) => t.id === topicoSelecionadoId);
+      if (!existeNoEdital) {
+        setTopicoSelecionadoId(topicosDisponiveis[0].id);
+      }
+    } else {
+      setTopicoSelecionadoId("");
+      setTeoria(null);
+      setQuestoes([]);
     }
   }, [topicosDisponiveis, topicoSelecionadoId]);
 
@@ -337,27 +348,33 @@ A **Normalização de Dados** tem como objetivo eliminar anomalias de inserção
     }
 
     try {
+      const bancaNome = editalAtivo?.banca || "Cebraspe";
+      const ehCebraspe =
+        bancaNome.toLowerCase().includes("cebraspe") ||
+        bancaNome.toLowerCase().includes("cespe");
+      const tipoEscolhido = ehCebraspe ? "certo_errado" : "multipla_escolha";
+
       const nova = await geminiService.gerarQuestaoInedita({
         topico: topicoObj.titulo,
-        banca: editalAtivo?.banca || "Cebraspe",
-        tipo: "multipla_escolha",
+        banca: bancaNome,
+        tipo: tipoEscolhido,
       });
 
       if (nova) {
         await cicloEstudosService.criarQuestao({
           topicoId: topicoSelecionadoId,
           enunciado: nova.enunciado,
-          tipo: "multipla_escolha",
+          tipo: tipoEscolhido,
           alternativas: nova.alternativas,
           respostaCorreta: nova.respostaCorreta,
           explicacaoDetalhada: nova.explicacaoDetalhada,
-          bancaOrigem: `${editalAtivo?.banca || "Banca"} (Gerada por IA)`,
+          bancaOrigem: `${bancaNome} (Inédita IA)`,
           anoOrigem: new Date().getFullYear(),
         });
 
         const { data: questoesNovas } = await cicloEstudosService.listarQuestoes(topicoSelecionadoId);
         setQuestoes(questoesNovas || []);
-        alert("✨ Nova questão técnica gerada com sucesso pela IA!");
+        alert(`✨ Nova questão estilo ${bancaNome} (${tipoEscolhido === "certo_errado" ? "Certo/Errado" : "Múltipla Escolha"}) gerada com sucesso pela IA!`);
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Erro";
@@ -390,7 +407,23 @@ A **Normalização de Dados** tem como objetivo eliminar anomalias de inserção
       {/* Barra de Seleção de Tópico do Edital */}
       <SeletorTopicoBarStl>
         <div style={{ flex: 1 }}>
-          <BadgeStl>Ciclo de Estudos 30/70</BadgeStl>
+          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+            <BadgeStl>Ciclo de Estudos 30/70</BadgeStl>
+            {editalAtivo && (
+              <span
+                style={{
+                  fontSize: "0.75rem",
+                  padding: "2px 8px",
+                  borderRadius: "8px",
+                  backgroundColor: "rgba(65, 45, 21, 0.6)",
+                  border: "1px solid rgba(225, 220, 201, 0.2)",
+                  color: theme.colors.textos.claroPrincipal,
+                }}
+              >
+                🎯 Edital: <strong>{editalAtivo.titulo}</strong> ({editalAtivo.banca})
+              </span>
+            )}
+          </div>
           <TitulosSecundariosStl style={{ fontSize: "1.25rem", marginTop: "0.25rem" }}>
             Selecione o Tópico para Estudo Completo
           </TitulosSecundariosStl>
