@@ -6,6 +6,7 @@ import { AdminPanel } from "./components/AdminPanel";
 import { EditalManager } from "./components/EditalManager";
 import { DailyStreakPlayer } from "./components/DailyStreakPlayer";
 import { FlashcardManager } from "./components/FlashcardManager";
+import { CicloEstudos3070 } from "./components/CicloEstudos3070";
 import { editaisService, type EditalCompleto } from "./services/editaisService";
 import {
   flashcardsService,
@@ -116,7 +117,9 @@ const DashboardConteudo: React.FC = () => {
   const { user, profile, signOut, loading } = useAuth();
   const [supabaseConectado, setSupabaseConectado] = useState<boolean>(false);
   const [mostrarPainelAdmin, setMostrarPainelAdmin] = useState<boolean>(false);
-  const [abaAtiva, setAbaAtiva] = useState<"streak" | "flashcards" | "editais" | "overview">("streak");
+  const [abaAtiva, setAbaAtiva] = useState<
+    "ciclo3070" | "streak" | "flashcards" | "editais" | "overview"
+  >("ciclo3070");
 
   // Editais
   const [editais, setEditais] = useState<EditalCompleto[]>([]);
@@ -273,22 +276,28 @@ const DashboardConteudo: React.FC = () => {
             <>
               <AbaNavegacaoContainerStl>
                 <AbaBotaoStl
+                  $ativa={abaAtiva === "ciclo3070"}
+                  onClick={() => setAbaAtiva("ciclo3070")}
+                >
+                  🎯 Ciclo 30/70 (Teoria & Questões)
+                </AbaBotaoStl>
+                <AbaBotaoStl
                   $ativa={abaAtiva === "streak"}
                   onClick={() => setAbaAtiva("streak")}
                 >
-                  ⚡ Dose Diária (Anki / SM-2)
+                  ⚡ Dose Diária (Anki)
                 </AbaBotaoStl>
                 <AbaBotaoStl
                   $ativa={abaAtiva === "flashcards"}
                   onClick={() => setAbaAtiva("flashcards")}
                 >
-                  🗂️ Gerenciar Cards ({cards.length})
+                  🗂️ Cards ({cards.length})
                 </AbaBotaoStl>
                 <AbaBotaoStl
                   $ativa={abaAtiva === "editais"}
                   onClick={() => setAbaAtiva("editais")}
                 >
-                  📋 Editais & Disciplinas ({editais.length})
+                  📋 Editais ({editais.length})
                 </AbaBotaoStl>
                 <AbaBotaoStl
                   $ativa={abaAtiva === "overview"}
@@ -298,7 +307,12 @@ const DashboardConteudo: React.FC = () => {
                 </AbaBotaoStl>
               </AbaNavegacaoContainerStl>
 
-              {/* ABA 1: SESSÃO DIÁRIA INTERATIVA */}
+              {/* ABA NO REQUISITO: CICLO 30/70 */}
+              {abaAtiva === "ciclo3070" && (
+                <CicloEstudos3070 editalAtivo={editalSelecionado} />
+              )}
+
+              {/* ABA 2: SESSÃO DIÁRIA INTERATIVA */}
               {abaAtiva === "streak" && (
                 <DailyStreakPlayer
                   cards={cards}
@@ -308,7 +322,7 @@ const DashboardConteudo: React.FC = () => {
                 />
               )}
 
-              {/* ABA 2: GERENCIAMENTO DE CARDS */}
+              {/* ABA 3: GERENCIAMENTO DE CARDS */}
               {abaAtiva === "flashcards" && (
                 <FlashcardManager
                   editalAtivo={editalSelecionado}
@@ -317,7 +331,7 @@ const DashboardConteudo: React.FC = () => {
                 />
               )}
 
-              {/* ABA 3: GESTÃO DE EDITAIS */}
+              {/* ABA 4: GESTÃO DE EDITAIS */}
               {abaAtiva === "editais" && (
                 <EditalManager
                   editais={editais}
@@ -327,7 +341,7 @@ const DashboardConteudo: React.FC = () => {
                 />
               )}
 
-              {/* ABA 4: VISÃO GERAL */}
+              {/* ABA 5: VISÃO GERAL */}
               {abaAtiva === "overview" && (
                 <CardStl $destaqueBorda style={{ maxWidth: "1100px", margin: "1rem 0" }}>
                   <TitulosSecundariosStl>Ciclo de Estudos TI em Andamento</TitulosSecundariosStl>
@@ -339,8 +353,9 @@ const DashboardConteudo: React.FC = () => {
                     <ParagrafosStl>✅ <strong>Etapa 1</strong>: Design System (Dark/Café, Styled-Components, Contraste AAA).</ParagrafosStl>
                     <ParagrafosStl>✅ <strong>Etapa 2</strong>: Supabase (Auth com Login de Username, RLS, Painel de ADM para SirReinato).</ParagrafosStl>
                     <ParagrafosStl>✅ <strong>Etapa 3</strong>: Mapeador de Edital & Árvore Hierárquica de Disciplinas e Tópicos.</ParagrafosStl>
-                    <ParagrafosStl>⚡ <strong>Etapa 4 (Ativa)</strong>: Dose Diária (Micro-learning, Repetição Espaçada SM-2, Streak de 5 cards diários, Flip 3D).</ParagrafosStl>
-                    <ParagrafosStl>⏳ <strong>Etapa 5 (Próxima)</strong>: Ciclo 30/70 (30% Teoria Ativa em Markdown + 70% Bateria de Questões comentadas de bancas).</ParagrafosStl>
+                    <ParagrafosStl>✅ <strong>Etapa 4</strong>: Dose Diária (Micro-learning, Repetição Espaçada SM-2, Streak de 5 cards diários, Flip 3D).</ParagrafosStl>
+                    <ParagrafosStl>⚡ <strong>Etapa 5 (Ativa)</strong>: Ciclo 30/70 (30% Teoria Ativa em Markdown + 70% Bateria de Questões comentadas de bancas).</ParagrafosStl>
+                    <ParagrafosStl>⏳ <strong>Etapa 6 (Próxima)</strong>: Mini-IDE & Desafios Práticos de Código para TI (SQL, Python, JS).</ParagrafosStl>
                   </div>
                 </CardStl>
               )}
