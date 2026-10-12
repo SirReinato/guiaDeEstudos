@@ -21,40 +21,47 @@ import type { TeoriaResumo } from "../types/database";
 
 const LayoutCicloStl = styled.div`
   width: 100%;
-  max-width: 1100px;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  margin: 1rem auto;
+  gap: 1.25rem;
 `;
 
 const SeletorTopicoBarStl = styled.div`
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
-  background-color: ${theme.colors.background.card};
-  border: ${theme.colors.borders.suave};
-  padding: 1rem 1.25rem;
-  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(31, 21, 12, 0.9) 0%, rgba(15, 10, 5, 0.95) 100%);
+  border: 1px solid rgba(225, 220, 201, 0.15);
+  padding: 1.15rem 1.4rem;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 `;
 
 const SelectStl = styled.select`
-  padding: 0.65rem 0.9rem;
+  padding: 0.65rem 1rem;
   border-radius: 8px;
   background-color: ${theme.colors.preto};
-  border: ${theme.colors.borders.destaque};
+  border: 1px solid ${theme.colors.ambarQueimado};
   color: ${theme.colors.textos.claroPrincipal};
   font-family: ${theme.fontsFamily.paragrafos};
   font-size: ${theme.fontSize.paragrafos.mm};
   box-sizing: border-box;
-  min-width: 260px;
+  min-width: 280px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+
+  &:focus {
+    border-color: ${theme.colors.marfim};
+    box-shadow: 0 0 10px rgba(225, 220, 201, 0.2);
+  }
 `;
 
 const Divisao3070ContainerStl = styled.div`
   display: grid;
-  grid-template-columns: 35% 65%;
-  gap: 1.5rem;
+  grid-template-columns: 38% 62%;
+  gap: 1.25rem;
   width: 100%;
 
   @media (max-width: ${theme.breakpoints.notebook}) {
@@ -63,8 +70,8 @@ const Divisao3070ContainerStl = styled.div`
 `;
 
 const PainelTeoriaStl = styled.div`
-  background-color: ${theme.colors.background.card};
-  border: ${theme.colors.borders.suave};
+  background: linear-gradient(135deg, rgba(31, 21, 12, 0.85) 0%, rgba(15, 10, 5, 0.95) 100%);
+  border: 1px solid rgba(225, 220, 201, 0.12);
   border-radius: 12px;
   padding: 1.5rem;
   display: flex;
@@ -72,6 +79,7 @@ const PainelTeoriaStl = styled.div`
   gap: 1rem;
   max-height: 800px;
   overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 `;
 
 const ConteudoTeoriaRenderStl = styled.div`
@@ -131,14 +139,19 @@ const PainelQuestoesStl = styled.div`
 `;
 
 const QuestaoCardStl = styled.div`
-  background-color: ${theme.colors.background.card};
-  border: ${theme.colors.borders.suave};
+  background: linear-gradient(135deg, rgba(31, 21, 12, 0.85) 0%, rgba(15, 10, 5, 0.95) 100%);
+  border: 1px solid rgba(225, 220, 201, 0.12);
   border-radius: 12px;
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  transition: all 0.2s ease-in-out;
+
+  &:hover {
+    border-color: rgba(225, 220, 201, 0.25);
+  }
 `;
 
 const AlternativaBotaoStl = styled.button<{
@@ -148,40 +161,45 @@ const AlternativaBotaoStl = styled.button<{
 }>`
   width: 100%;
   text-align: left;
-  padding: 0.9rem 1.1rem;
-  border-radius: 8px;
+  padding: 0.95rem 1.15rem;
+  border-radius: 10px;
   cursor: pointer;
   display: flex;
-  gap: 0.75rem;
+  gap: 0.85rem;
   align-items: flex-start;
   font-family: ${theme.fontsFamily.paragrafos};
   font-size: 0.95rem;
   line-height: 1.5;
-  transition: all 0.2s ease-in-out;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
   background-color: ${(props) => {
     if (!props.$revelada) {
-      return props.$selecionada ? "rgba(65, 45, 21, 0.8)" : theme.colors.preto;
+      return props.$selecionada ? "rgba(65, 45, 21, 0.85)" : "rgba(0, 0, 0, 0.5)";
     }
     if (props.$correta) return "rgba(40, 160, 80, 0.25)";
     if (props.$selecionada && !props.$correta) return "rgba(220, 50, 50, 0.25)";
-    return theme.colors.preto;
+    return "rgba(0, 0, 0, 0.5)";
   }};
 
   border: 1px solid
     ${(props) => {
       if (!props.$revelada) {
-        return props.$selecionada ? theme.colors.marfim : theme.colors.borders.destaque;
+        return props.$selecionada ? theme.colors.marfim : "rgba(225, 220, 201, 0.15)";
       }
       if (props.$correta) return "#81C784";
       if (props.$selecionada && !props.$correta) return "#E57373";
-      return theme.colors.borders.suave;
+      return "rgba(225, 220, 201, 0.1)";
     }};
 
   color: ${theme.colors.textos.claroPrincipal};
+  box-shadow: ${(props) =>
+    props.$selecionada && !props.$revelada
+      ? "0 4px 15px rgba(65, 45, 21, 0.6)"
+      : "none"};
 
   &:hover {
     border-color: ${theme.colors.marfim};
+    transform: ${(props) => (!props.$revelada ? "translateY(-1px)" : "none")};
   }
 `;
 
@@ -189,7 +207,7 @@ const ComentarioGabaritoStl = styled.div<{ $acertou: boolean }>`
   background-color: ${(props) =>
     props.$acertou ? "rgba(40, 160, 80, 0.15)" : "rgba(220, 50, 50, 0.15)"};
   border: 1px solid ${(props) => (props.$acertou ? "#81C784" : "#E57373")};
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 1.25rem;
   margin-top: 0.5rem;
   animation: fadeIn 0.3s ease-in-out;

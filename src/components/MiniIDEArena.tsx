@@ -22,17 +22,15 @@ import { validarCodigoDesafio, type ValidacaoResultado } from "../utils/codeVali
 
 const LayoutArenaStl = styled.div`
   width: 100%;
-  max-width: 1100px;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  margin: 1rem auto;
+  gap: 1.25rem;
 `;
 
 const ArenaSplitStl = styled.div`
   display: grid;
-  grid-template-columns: 40% 60%;
-  gap: 1.5rem;
+  grid-template-columns: 38% 62%;
+  gap: 1.25rem;
   width: 100%;
 
   @media (max-width: ${theme.breakpoints.notebook}) {
@@ -41,8 +39,8 @@ const ArenaSplitStl = styled.div`
 `;
 
 const PainelEnunciadoStl = styled.div`
-  background-color: ${theme.colors.background.card};
-  border: ${theme.colors.borders.suave};
+  background: linear-gradient(135deg, rgba(31, 21, 12, 0.85) 0%, rgba(15, 10, 5, 0.95) 100%);
+  border: 1px solid rgba(225, 220, 201, 0.12);
   border-radius: 12px;
   padding: 1.5rem;
   display: flex;
@@ -50,6 +48,7 @@ const PainelEnunciadoStl = styled.div`
   gap: 1rem;
   max-height: 750px;
   overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 `;
 
 const EditorWrapperStl = styled.div`

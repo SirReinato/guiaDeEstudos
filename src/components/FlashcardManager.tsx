@@ -208,15 +208,24 @@ export const FlashcardManager: React.FC<Props> = ({
     onRecarregar();
   };
 
-  // Filtragem de cards por Edital Ativo
+  // Filtragem de cards por Edital Ativo e Busca por texto
+  const [termoBusca, setTermoBusca] = useState("");
+
   const cardsFiltrados = cards.filter((c) => {
-    if (!filtrarPorEdital || !editalAtivo) return true;
-    if (!c.topico_id) return true; // Mostra gerais também
-    return topicoIdsEditalAtivo.has(c.topico_id);
+    if (filtrarPorEdital && editalAtivo && c.topico_id && !topicoIdsEditalAtivo.has(c.topico_id)) {
+      return false;
+    }
+    if (!termoBusca.trim()) return true;
+    const busca = termoBusca.toLowerCase();
+    return (
+      c.frente.toLowerCase().includes(busca) ||
+      c.verso.toLowerCase().includes(busca) ||
+      (c.topicos?.titulo && c.topicos.titulo.toLowerCase().includes(busca))
+    );
   });
 
   return (
-    <CardStl $destaqueBorda style={{ maxWidth: "750px", margin: "1.5rem auto" }}>
+    <CardStl $destaqueBorda style={{ maxWidth: "850px", margin: "1rem auto" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
         <div>
           <BadgeStl>Banco de Flashcards</BadgeStl>
@@ -307,6 +316,27 @@ export const FlashcardManager: React.FC<Props> = ({
             </BotaoSecundarioStl>
           )}
         </div>
+
+        {cards.length > 0 && (
+          <div style={{ marginTop: "0.75rem" }}>
+            <input
+              type="text"
+              placeholder="🔍 Filtrar cards por termo, conceito ou tópico..."
+              value={termoBusca}
+              onChange={(e) => setTermoBusca(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "0.6rem 0.9rem",
+                borderRadius: "8px",
+                backgroundColor: theme.colors.preto,
+                border: "1px solid rgba(225, 220, 201, 0.2)",
+                color: theme.colors.textos.claroPrincipal,
+                fontSize: "0.85rem",
+                boxSizing: "border-box",
+              }}
+            />
+          </div>
+        )}
 
         {cardsFiltrados.length === 0 ? (
           <ParagrafosStl $secundario style={{ marginTop: "0.5rem" }}>

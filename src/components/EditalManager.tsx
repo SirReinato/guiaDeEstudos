@@ -17,29 +17,29 @@ import { geminiService } from "../services/geminiService";
 
 const ContainerStl = styled.div`
   width: 100%;
-  max-width: 1100px;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  margin: 1.5rem 0;
+  gap: 1.25rem;
 `;
 
 const UploadZoneStl = styled.div<{ $ativo?: boolean }>`
   border: 2px dashed ${(props) => (props.$ativo ? theme.colors.marfim : theme.colors.ambarQueimado)};
-  background-color: ${theme.colors.preto};
-  border-radius: 12px;
-  padding: 2rem;
+  background: linear-gradient(135deg, rgba(31, 21, 12, 0.6) 0%, rgba(0, 0, 0, 0.8) 100%);
+  border-radius: 14px;
+  padding: 2.25rem 1.5rem;
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.85rem;
   cursor: pointer;
-  transition: all 0.2s ease-in-out;
+  transition: all 0.22s ease-in-out;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
 
   &:hover {
     border-color: ${theme.colors.marfim};
-    background-color: rgba(65, 45, 21, 0.15);
+    background: linear-gradient(135deg, rgba(65, 45, 21, 0.25) 0%, rgba(15, 10, 5, 0.9) 100%);
+    transform: translateY(-2px);
   }
 `;
 
@@ -97,23 +97,30 @@ const SelectStl = styled.select`
 `;
 
 const EditalItemCardStl = styled.div<{ $selecionado: boolean }>`
-  background-color: ${theme.colors.background.card};
+  background: ${(props) =>
+    props.$selecionado
+      ? "linear-gradient(135deg, rgba(65, 45, 21, 0.45) 0%, rgba(31, 21, 12, 0.95) 100%)"
+      : "linear-gradient(135deg, rgba(31, 21, 12, 0.8) 0%, rgba(15, 10, 5, 0.9) 100%)"};
   border: ${(props) =>
     props.$selecionado
       ? `2px solid ${theme.colors.marfim}`
-      : theme.colors.borders.suave};
-  border-radius: 10px;
-  padding: 1.25rem;
+      : "1px solid rgba(225, 220, 201, 0.12)"};
+  border-radius: 12px;
+  padding: 1.35rem;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-  transition: transform 0.2s, border-color 0.2s;
+  gap: 0.85rem;
+  box-shadow: ${(props) =>
+    props.$selecionado
+      ? "0 8px 30px rgba(65, 45, 21, 0.6), inset 0 1px 0 rgba(225, 220, 201, 0.2)"
+      : "0 6px 20px rgba(0, 0, 0, 0.4)"};
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 
   &:hover {
     border-color: ${theme.colors.marfim};
     transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   }
 `;
 

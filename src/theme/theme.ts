@@ -314,3 +314,154 @@ export const BadgeStl = styled.span`
   border: 1px solid rgba(225, 220, 201, 0.25);
   display: inline-block;
 `;
+
+// Card Glassmorphism Moderno de Alto Desempenho
+export const GlassCardStl = styled.div<{ $destaque?: boolean; $padding?: string }>`
+  width: 100%;
+  background: linear-gradient(135deg, rgba(31, 21, 12, 0.85) 0%, rgba(15, 10, 5, 0.95) 100%);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-radius: 14px;
+  padding: ${(props) => props.$padding || "1.5rem"};
+  box-sizing: border-box;
+  border: 1px solid ${(props) => (props.$destaque ? theme.colors.ambarQueimado : "rgba(225, 220, 201, 0.12)")};
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(225, 220, 201, 0.08);
+  transition: all 0.25s ease-in-out;
+
+  &:hover {
+    border-color: ${(props) => (props.$destaque ? theme.colors.marfim : "rgba(225, 220, 201, 0.25)")};
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(225, 220, 201, 0.15);
+  }
+
+  @media (max-width: ${theme.breakpoints.tablet}) {
+    padding: ${(props) => props.$padding || "1rem"};
+  }
+`;
+
+// Input Moderno Estilizado
+export const ModernInputStl = styled.input`
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background-color: ${theme.colors.preto};
+  border: 1px solid rgba(225, 220, 201, 0.2);
+  color: ${theme.colors.textos.claroPrincipal};
+  font-family: ${theme.fontsFamily.paragrafos};
+  font-size: ${theme.fontSize.paragrafos.mm};
+  box-sizing: border-box;
+  transition: all 0.2s ease-in-out;
+
+  &:focus {
+    border-color: ${theme.colors.marfim};
+    box-shadow: 0 0 0 2px rgba(225, 220, 201, 0.25);
+    background-color: rgba(31, 21, 12, 0.5);
+  }
+
+  &::placeholder {
+    color: rgba(225, 220, 201, 0.45);
+  }
+`;
+
+// Select Moderno Estilizado
+export const ModernSelectStl = styled.select`
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background-color: ${theme.colors.preto};
+  border: 1px solid rgba(225, 220, 201, 0.2);
+  color: ${theme.colors.textos.claroPrincipal};
+  font-family: ${theme.fontsFamily.paragrafos};
+  font-size: ${theme.fontSize.paragrafos.mm};
+  box-sizing: border-box;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+
+  &:focus {
+    border-color: ${theme.colors.marfim};
+    box-shadow: 0 0 0 2px rgba(225, 220, 201, 0.25);
+  }
+`;
+
+// Textarea Moderno Estilizado
+export const ModernTextareaStl = styled.textarea`
+  width: 100%;
+  min-height: 100px;
+  padding: 0.85rem 1rem;
+  border-radius: 8px;
+  background-color: ${theme.colors.preto};
+  border: 1px solid rgba(225, 220, 201, 0.2);
+  color: ${theme.colors.textos.claroPrincipal};
+  font-family: ${theme.fontsFamily.paragrafos};
+  font-size: ${theme.fontSize.paragrafos.mm};
+  box-sizing: border-box;
+  resize: vertical;
+  line-height: 1.6;
+  transition: all 0.2s ease-in-out;
+
+  &:focus {
+    border-color: ${theme.colors.marfim};
+    box-shadow: 0 0 0 2px rgba(225, 220, 201, 0.25);
+    background-color: rgba(31, 21, 12, 0.5);
+  }
+
+  &::placeholder {
+    color: rgba(225, 220, 201, 0.45);
+  }
+`;
+
+// Pill Badge com Suporte a Variações Semânticas
+export const PillBadgeStl = styled.span<{
+  $variante?: "neutro" | "sucesso" | "alerta" | "destaque";
+}>`
+  font-family: ${theme.fontsFamily.titulos};
+  font-size: ${theme.fontSize.paragrafos.micro};
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+
+  background-color: ${(props) => {
+    switch (props.$variante) {
+      case "sucesso":
+        return "rgba(40, 160, 80, 0.2)";
+      case "alerta":
+        return "rgba(255, 183, 77, 0.2)";
+      case "destaque":
+        return "rgba(65, 45, 21, 0.7)";
+      default:
+        return "rgba(0, 0, 0, 0.5)";
+    }
+  }};
+
+  color: ${(props) => {
+    switch (props.$variante) {
+      case "sucesso":
+        return "#81C784";
+      case "alerta":
+        return "#FFB74D";
+      case "destaque":
+        return theme.colors.marfim;
+      default:
+        return theme.colors.textos.claroPrincipal;
+    }
+  }};
+
+  border: 1px solid
+    ${(props) => {
+      switch (props.$variante) {
+        case "sucesso":
+          return "#81C784";
+        case "alerta":
+          return "#FFB74D";
+        case "destaque":
+          return theme.colors.marfim;
+        default:
+          return "rgba(225, 220, 201, 0.2)";
+      }
+    }};
+`;
+

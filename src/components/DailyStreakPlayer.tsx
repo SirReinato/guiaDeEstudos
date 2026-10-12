@@ -151,6 +151,27 @@ export const DailyStreakPlayer: React.FC<Props> = ({
     setProcessando(false);
   };
 
+  // Suporte a teclado: Espaço para virar e 1-4 para avaliar
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignora se estiver digitando em um input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      if (e.code === "Space") {
+        e.preventDefault();
+        setVirado((prev) => !prev);
+      } else if (virado && !processando) {
+        if (e.key === "1") handleAvaliar(0);
+        else if (e.key === "2") handleAvaliar(3);
+        else if (e.key === "3") handleAvaliar(4);
+        else if (e.key === "4") handleAvaliar(5);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [virado, processando, cardAtual]);
+
   if (!cardsParaEstudo || cardsParaEstudo.length === 0) {
     return (
       <CardStl $destaqueBorda style={{ maxWidth: "700px", margin: "1.5rem auto", textAlign: "center" }}>
@@ -269,29 +290,29 @@ export const DailyStreakPlayer: React.FC<Props> = ({
           {virado ? (
             <ControlesRepeticaoStl>
               <BotaoAvaliacaoStl $cor="#E57373" onClick={() => handleAvaliar(0)} disabled={processando}>
-                ❌ Errei
+                <div>❌ Errei <span style={{ opacity: 0.6, fontSize: "0.7rem" }}>[1]</span></div>
                 <div style={{ fontSize: "0.65rem", opacity: 0.8 }}>Rever amanhã</div>
               </BotaoAvaliacaoStl>
 
               <BotaoAvaliacaoStl $cor="#FFB74D" onClick={() => handleAvaliar(3)} disabled={processando}>
-                ⚠️ Difícil
+                <div>⚠️ Difícil <span style={{ opacity: 0.6, fontSize: "0.7rem" }}>[2]</span></div>
                 <div style={{ fontSize: "0.65rem", opacity: 0.8 }}>Em 2-3 dias</div>
               </BotaoAvaliacaoStl>
 
               <BotaoAvaliacaoStl $cor="#81C784" onClick={() => handleAvaliar(4)} disabled={processando}>
-                👍 Bom
+                <div>👍 Bom <span style={{ opacity: 0.6, fontSize: "0.7rem" }}>[3]</span></div>
                 <div style={{ fontSize: "0.65rem", opacity: 0.8 }}>Intervalo normal</div>
               </BotaoAvaliacaoStl>
 
               <BotaoAvaliacaoStl $cor="#64B5F6" onClick={() => handleAvaliar(5)} disabled={processando}>
-                ⚡ Fácil
+                <div>⚡ Fácil <span style={{ opacity: 0.6, fontSize: "0.7rem" }}>[4]</span></div>
                 <div style={{ fontSize: "0.65rem", opacity: 0.8 }}>Intervalo longo</div>
               </BotaoAvaliacaoStl>
             </ControlesRepeticaoStl>
           ) : (
             <div style={{ textAlign: "center", marginTop: "1rem" }}>
               <BotaoPrimarioStl onClick={() => setVirado(true)}>
-                👁️ Revelar Resposta
+                👁️ Revelar Resposta <span style={{ opacity: 0.7, fontSize: "0.75rem", marginLeft: "0.3rem" }}>[Espaço]</span>
               </BotaoPrimarioStl>
             </div>
           )}

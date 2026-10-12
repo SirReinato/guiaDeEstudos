@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { EditalProvider, useEdital } from "./contexts/EditalContext";
 import { AuthModal } from "./components/AuthModal";
 import { AdminPanel } from "./components/AdminPanel";
+import { AppNavbar } from "./components/AppNavbar";
 import { EditalSelectorBar } from "./components/EditalSelectorBar";
 import { EditalManager } from "./components/EditalManager";
 import { DailyStreakPlayer } from "./components/DailyStreakPlayer";
@@ -18,106 +19,108 @@ import {
 import { supabase } from "./services/supabase";
 import {
   theme,
-  ConteinerGeral,
-  TitulosPrincipaisStl,
   TitulosSecundariosStl,
   ParagrafosStl,
-  BotaoSecundarioStl,
   CardStl,
-  BadgeStl,
+  GlassCardStl,
+  PillBadgeStl,
 } from "./theme/theme";
 
-const HeaderStl = styled.header`
+const AppLayoutStl = styled.div`
   width: 100%;
-  max-width: 1100px;
+  min-height: 100vh;
+  background-color: ${theme.colors.background.app};
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 1rem;
-  margin-bottom: ${theme.spacing.gg};
 `;
 
-const AreaStatusConexaoStl = styled.div<{ $conectado: boolean }>`
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.4rem 1rem;
-  border-radius: 999px;
-  font-family: ${theme.fontsFamily.titulos};
-  font-size: ${theme.fontSize.paragrafos.micro};
-  border: 1px solid
-    ${(props) => (props.$conectado ? "#81C784" : theme.colors.ambarQueimado)};
-  background-color: ${(props) =>
-    props.$conectado ? "rgba(40, 160, 80, 0.15)" : "rgba(65, 45, 21, 0.25)"};
-  color: ${theme.colors.textos.claroPrincipal};
-`;
-
-const PontoStatusStl = styled.span<{ $conectado: boolean }>`
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: ${(props) => (props.$conectado ? "#81C784" : "#FFB74D")};
-  box-shadow: 0 0 6px ${(props) => (props.$conectado ? "#81C784" : "#FFB74D")};
-`;
-
-const UserBarStl = styled.div`
+const MainContentWrapperStl = styled.main`
   width: 100%;
-  max-width: 1100px;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 3rem;
+  box-sizing: border-box;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background-color: ${theme.colors.background.card};
-  border: ${theme.colors.borders.suave};
-  padding: 1rem 1.5rem;
-  border-radius: 10px;
-  margin-bottom: 1.5rem;
-  flex-wrap: wrap;
-  gap: 1rem;
-`;
+  flex-direction: column;
+  gap: 1.25rem;
 
-const AbaNavegacaoContainerStl = styled.div`
-  display: flex;
-  gap: 0.75rem;
-  width: 100%;
-  max-width: 1100px;
-  margin-bottom: 1rem;
-  flex-wrap: wrap;
-`;
-
-const AbaBotaoStl = styled.button<{ $ativa: boolean }>`
-  font-family: ${theme.fontsFamily.titulos};
-  font-size: ${theme.fontSize.paragrafos.pp};
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  padding: 0.65rem 1.25rem;
-  border-radius: 8px;
-  cursor: pointer;
-  background: ${(props) =>
-    props.$ativa ? theme.colors.gradients.btnPrimario : "transparent"};
-  color: ${theme.colors.textos.claroPrincipal};
-  border: ${(props) =>
-    props.$ativa ? `1px solid ${theme.colors.marfim}` : theme.colors.borders.suave};
-  transition: all 0.2s ease-in-out;
-
-  &:hover {
-    border-color: ${theme.colors.marfim};
+  @media (max-width: ${theme.breakpoints.tablet}) {
+    padding: 1rem 0.75rem 2.5rem;
   }
 `;
 
-const BloqueioAvisoStl = styled.div`
-  background-color: rgba(255, 183, 77, 0.12);
-  border: 1px solid #FFB74D;
-  padding: 1.5rem;
-  border-radius: 10px;
-  max-width: 600px;
+const NavegacaoSegmentadaContainerStl = styled.nav`
   width: 100%;
+  background: rgba(31, 21, 12, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(225, 220, 201, 0.12);
+  border-radius: 12px;
+  padding: 0.4rem;
+  display: flex;
+  gap: 0.35rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+`;
+
+const TabBotaoStl = styled.button<{ $ativa: boolean }>`
+  font-family: ${theme.fontsFamily.titulos};
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 0.65rem 1.15rem;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+
+  background: ${(props) =>
+    props.$ativa ? theme.colors.gradients.btnPrimario : "transparent"};
+  color: ${(props) =>
+    props.$ativa ? theme.colors.marfim : "rgba(225, 220, 201, 0.7)"};
+  border: ${(props) =>
+    props.$ativa ? `1px solid ${theme.colors.marfim}` : "1px solid transparent"};
+  box-shadow: ${(props) =>
+    props.$ativa ? "0 4px 14px rgba(65, 45, 21, 0.6)" : "none"};
+
+  &:hover {
+    color: ${theme.colors.marfim};
+    background: ${(props) =>
+      props.$ativa
+        ? theme.colors.gradients.btnPrimarioHover
+        : "rgba(65, 45, 21, 0.3)"};
+    border-color: ${(props) =>
+      props.$ativa ? theme.colors.marfim : "rgba(225, 220, 201, 0.2)"};
+  }
+`;
+
+const TabBadgeCountStl = styled.span<{ $ativa: boolean }>`
+  font-size: 0.7rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background-color: ${(props) =>
+    props.$ativa ? "rgba(225, 220, 201, 0.25)" : "rgba(0, 0, 0, 0.5)"};
+  color: ${theme.colors.marfim};
+  border: 1px solid rgba(225, 220, 201, 0.15);
+`;
+
+const BloqueioAvisoStl = styled(GlassCardStl)`
+  max-width: 650px;
+  width: 100%;
+  margin: 2.5rem auto;
   text-align: center;
-  margin: 2rem auto;
+  border-color: #ffb74d;
 `;
 
 const DashboardConteudo: React.FC = () => {
-  const { user, profile, signOut, loading } = useAuth();
+  const { user, profile, loading } = useAuth();
   const { editais, editalAtivo, selecionarEdital, carregarEditais } = useEdital();
   const [supabaseConectado, setSupabaseConectado] = useState<boolean>(false);
   const [mostrarPainelAdmin, setMostrarPainelAdmin] = useState<boolean>(false);
@@ -170,215 +173,207 @@ const DashboardConteudo: React.FC = () => {
   const isPending = profile?.status === "pending" && !isAdmin;
   const isRejected = profile?.status === "rejected" && !isAdmin;
 
-  return (
-    <ConteinerGeral>
-      {/* Cabeçalho */}
-      <HeaderStl>
-        <AreaStatusConexaoStl $conectado={supabaseConectado}>
-          <PontoStatusStl $conectado={supabaseConectado} />
-          {supabaseConectado ? "Supabase Conectado" : "Conectando ao Supabase..."}
-        </AreaStatusConexaoStl>
-
-        <TitulosPrincipaisStl>Guia de Estudos TI</TitulosPrincipaisStl>
-        <ParagrafosStl $grande $secundario $centro>
-          Ambiente de Preparação de Alto Rendimento para Concursos & Programação
+  if (loading) {
+    return (
+      <AppLayoutStl style={{ alignItems: "center", justifyContent: "center" }}>
+        <ParagrafosStl $grande $centro>
+          Carregando ambiente de preparação de alto rendimento...
         </ParagrafosStl>
-      </HeaderStl>
+      </AppLayoutStl>
+    );
+  }
 
-      {/* Sessão do Usuário */}
-      {loading ? (
-        <ParagrafosStl $centro>Carregando perfil e sessão de estudos...</ParagrafosStl>
-      ) : user ? (
-        <>
-          <UserBarStl>
-            <div>
-              <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                <BadgeStl>
-                  {isAdmin ? "⭐ Administrador Geral" : "Aluno Registrado"}
-                </BadgeStl>
-                <span
-                  style={{
-                    fontSize: "0.75rem",
-                    padding: "2px 8px",
-                    borderRadius: "12px",
-                    backgroundColor:
-                      profile?.status === "active"
-                        ? "rgba(40,160,80,0.2)"
-                        : "rgba(255,183,77,0.2)",
-                    color: profile?.status === "active" ? "#81C784" : "#FFB74D",
-                    border: "1px solid currentColor",
-                  }}
-                >
-                  Status: {profile?.status || "active"}
-                </span>
-              </div>
-
-              <TitulosSecundariosStl style={{ fontSize: "1.4rem", marginTop: "0.4rem" }}>
-                {profile?.username || user.email?.split("@")[0]}
-              </TitulosSecundariosStl>
-            </div>
-
-            <div style={{ display: "flex", gap: "0.75rem" }}>
-              {isAdmin && (
-                <BotaoSecundarioStl onClick={() => setMostrarPainelAdmin(!mostrarPainelAdmin)}>
-                  {mostrarPainelAdmin ? "✕ Fechar Painel ADM" : "🛡️ Painel de Gestão (ADM)"}
-                </BotaoSecundarioStl>
-              )}
-              <BotaoSecundarioStl onClick={() => signOut()}>
-                🚪 Sair da Conta
-              </BotaoSecundarioStl>
-            </div>
-          </UserBarStl>
-
-          {/* Painel Administrativo de Usuários */}
-          {isAdmin && mostrarPainelAdmin && <AdminPanel />}
-
-          {/* Bloqueio se pendente */}
-          {isPending && (
-            <BloqueioAvisoStl>
-              <TitulosSecundariosStl style={{ fontSize: "1.3rem", color: "#FFB74D" }}>
-                ⏳ Cadastro em Análise
-              </TitulosSecundariosStl>
-              <ParagrafosStl style={{ marginTop: "0.75rem" }}>
-                Olá, <strong>{profile?.username}</strong>! Sua solicitação está aguardando a aprovação de <strong>SirReinato</strong>.
-              </ParagrafosStl>
-            </BloqueioAvisoStl>
-          )}
-
-          {isRejected && (
-            <BloqueioAvisoStl style={{ borderColor: "#E57373", backgroundColor: "rgba(220,50,50,0.12)" }}>
-              <TitulosSecundariosStl style={{ fontSize: "1.3rem", color: "#E57373" }}>
-                🚫 Acesso Bloqueado
-              </TitulosSecundariosStl>
-              <ParagrafosStl style={{ marginTop: "0.75rem" }}>
-                Sua conta não possui permissão ativa para acessar a plataforma.
-              </ParagrafosStl>
-            </BloqueioAvisoStl>
-          )}
-
-          {/* Navegação e Conteúdo de Estudos */}
-          {!isPending && !isRejected && (
-            <>
-              {/* Barra Fixa Global de Seleção e Foco do Edital */}
-              <EditalSelectorBar onAbrirAbaEditais={() => setAbaAtiva("editais")} />
-
-              <AbaNavegacaoContainerStl>
-                <AbaBotaoStl
-                  $ativa={abaAtiva === "redacao"}
-                  onClick={() => setAbaAtiva("redacao")}
-                >
-                  ✍️ Oficina de Discursivas (TI)
-                </AbaBotaoStl>
-                <AbaBotaoStl
-                  $ativa={abaAtiva === "ide"}
-                  onClick={() => setAbaAtiva("ide")}
-                >
-                  💻 Mini-IDE (Desafios)
-                </AbaBotaoStl>
-                <AbaBotaoStl
-                  $ativa={abaAtiva === "ciclo3070"}
-                  onClick={() => setAbaAtiva("ciclo3070")}
-                >
-                  🎯 Ciclo 30/70
-                </AbaBotaoStl>
-                <AbaBotaoStl
-                  $ativa={abaAtiva === "streak"}
-                  onClick={() => setAbaAtiva("streak")}
-                >
-                  ⚡ Dose Diária (Anki)
-                </AbaBotaoStl>
-                <AbaBotaoStl
-                  $ativa={abaAtiva === "flashcards"}
-                  onClick={() => setAbaAtiva("flashcards")}
-                >
-                  🗂️ Cards ({cards.length})
-                </AbaBotaoStl>
-                <AbaBotaoStl
-                  $ativa={abaAtiva === "editais"}
-                  onClick={() => setAbaAtiva("editais")}
-                >
-                  📋 Editais ({editais.length})
-                </AbaBotaoStl>
-                <AbaBotaoStl
-                  $ativa={abaAtiva === "overview"}
-                  onClick={() => setAbaAtiva("overview")}
-                >
-                  📊 Próximas Etapas
-                </AbaBotaoStl>
-              </AbaNavegacaoContainerStl>
-
-              {/* ABA ATIVA: OFICINA DE DISCURSIVAS */}
-              {abaAtiva === "redacao" && (
-                <RedacaoLaboratorio editalAtivo={editalAtivo} />
-              )}
-
-              {/* ABA: MINI-IDE DE CONCURSOS */}
-              {abaAtiva === "ide" && (
-                <MiniIDEArena editalAtivo={editalAtivo} />
-              )}
-
-              {/* ABA: CICLO 30/70 */}
-              {abaAtiva === "ciclo3070" && (
-                <CicloEstudos3070 editalAtivo={editalAtivo} />
-              )}
-
-              {/* ABA: SESSÃO DIÁRIA INTERATIVA */}
-              {abaAtiva === "streak" && (
-                <DailyStreakPlayer
-                  cards={cards}
-                  onResponder={handleResponderCard}
-                  cardsRevisadosHoje={cardsRevisadosHoje}
-                  metaDiaria={META_DIARIA}
-                />
-              )}
-
-              {/* ABA: GERENCIAMENTO DE CARDS */}
-              {abaAtiva === "flashcards" && (
-                <FlashcardManager
-                  editalAtivo={editalAtivo}
-                  cards={cards}
-                  onRecarregar={carregarFlashcards}
-                />
-              )}
-
-              {/* ABA: GESTÃO DE EDITAIS */}
-              {abaAtiva === "editais" && (
-                <EditalManager
-                  editais={editais}
-                  onRecarregar={carregarEditais}
-                  editalSelecionado={editalAtivo}
-                  onSelecionarEdital={(e) => e && selecionarEdital(e.id)}
-                />
-              )}
-
-              {/* ABA: VISÃO GERAL */}
-              {abaAtiva === "overview" && (
-                <CardStl $destaqueBorda style={{ maxWidth: "1100px", margin: "1rem 0" }}>
-                  <TitulosSecundariosStl>Ciclo de Estudos TI em Andamento</TitulosSecundariosStl>
-                  <ParagrafosStl $secundario style={{ marginTop: "0.5rem" }}>
-                    Status atual da plataforma Guia de Estudos TI:
-                  </ParagrafosStl>
-
-                  <div style={{ marginTop: "1rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                    <ParagrafosStl>✅ <strong>Etapa 1</strong>: Design System (Dark/Café, Styled-Components, Contraste AAA).</ParagrafosStl>
-                    <ParagrafosStl>✅ <strong>Etapa 2</strong>: Supabase (Auth com Login de Username, RLS, Painel de ADM para SirReinato).</ParagrafosStl>
-                    <ParagrafosStl>✅ <strong>Etapa 3</strong>: Mapeador de Edital & Árvore Hierárquica de Disciplinas e Tópicos (Pesos 1 a 5 estrelas).</ParagrafosStl>
-                    <ParagrafosStl>✅ <strong>Etapa 4</strong>: Dose Diária (Micro-learning, Repetição Espaçada SM-2, Streak de 5 cards diários, Flip 3D).</ParagrafosStl>
-                    <ParagrafosStl>✅ <strong>Etapa 5</strong>: Ciclo 30/70 (30% Teoria Ativa em Markdown + 70% Bateria de Questões comentadas).</ParagrafosStl>
-                    <ParagrafosStl>✅ <strong>Etapa 6</strong>: Mini-IDE & Desafios Práticos de Código para TI (SQL, Python, JS com Monaco Editor).</ParagrafosStl>
-                    <ParagrafosStl>✅ <strong>Etapa 7</strong>: Laboratório de Redação & Discursivas Técnicas de TI (Folha Pautada, Limite de Linhas, Espelho Oficial).</ParagrafosStl>
-                    <ParagrafosStl>✅ <strong>Etapa 8</strong>: Inteligência Artificial (Google Gemini 3.8 Flash, Extração de PDF e Provas Anteriores).</ParagrafosStl>
-                    <ParagrafosStl>🚀 <strong>Modo Edital Centralizado</strong>: Todos os módulos filtram, adaptam bancas e geram questões com IA sincronizados ao Edital Ativo.</ParagrafosStl>
-                  </div>
-                </CardStl>
-              )}
-            </>
-          )}
-        </>
-      ) : (
+  if (!user) {
+    return (
+      <AppLayoutStl>
         <AuthModal />
-      )}
-    </ConteinerGeral>
+      </AppLayoutStl>
+    );
+  }
+
+  return (
+    <AppLayoutStl>
+      {/* 1. BARRA SUPERIOR FIXA MODERNA */}
+      <AppNavbar
+        conectado={supabaseConectado}
+        mostrarPainelAdmin={mostrarPainelAdmin}
+        onToggleAdmin={() => setMostrarPainelAdmin(!mostrarPainelAdmin)}
+        onAbrirEditais={() => setAbaAtiva("editais")}
+      />
+
+      <MainContentWrapperStl>
+        {/* Painel Administrativo de Usuários */}
+        {isAdmin && mostrarPainelAdmin && <AdminPanel />}
+
+        {/* Bloqueio se pendente ou rejeitado */}
+        {isPending && (
+          <BloqueioAvisoStl>
+            <PillBadgeStl $variante="alerta">Cadastro em Análise</PillBadgeStl>
+            <TitulosSecundariosStl style={{ fontSize: "1.3rem", color: "#FFB74D", marginTop: "1rem" }}>
+              ⏳ Solicitação de Acesso em Análise
+            </TitulosSecundariosStl>
+            <ParagrafosStl style={{ marginTop: "0.75rem" }}>
+              Olá, <strong>{profile?.username}</strong>! Seu cadastro foi recebido e aguarda a autorização de <strong>SirReinato</strong>.
+            </ParagrafosStl>
+          </BloqueioAvisoStl>
+        )}
+
+        {isRejected && (
+          <BloqueioAvisoStl style={{ borderColor: "#E57373" }}>
+            <PillBadgeStl $variante="alerta" style={{ color: "#E57373", borderColor: "#E57373" }}>
+              Acesso Não Autorizado
+            </PillBadgeStl>
+            <TitulosSecundariosStl style={{ fontSize: "1.3rem", color: "#E57373", marginTop: "1rem" }}>
+              🚫 Acesso Bloqueado
+            </TitulosSecundariosStl>
+            <ParagrafosStl style={{ marginTop: "0.75rem" }}>
+              Sua conta não possui permissão ativa para acessar os simulados e laboratórios da plataforma.
+            </ParagrafosStl>
+          </BloqueioAvisoStl>
+        )}
+
+        {/* 2. ÁREA DE ESTUDOS (LIBERADA PARA USUÁRIO ATIVO) */}
+        {!isPending && !isRejected && (
+          <>
+            {/* Hub Cockpit do Edital Foco */}
+            <EditalSelectorBar onAbrirAbaEditais={() => setAbaAtiva("editais")} />
+
+            {/* Barra de Navegação Segmentada Moderna */}
+            <NavegacaoSegmentadaContainerStl aria-label="Navegação dos Módulos de Estudo">
+              <TabBotaoStl
+                $ativa={abaAtiva === "redacao"}
+                onClick={() => setAbaAtiva("redacao")}
+              >
+                <span>✍️</span>
+                <span>Oficina de Discursivas</span>
+              </TabBotaoStl>
+
+              <TabBotaoStl
+                $ativa={abaAtiva === "ide"}
+                onClick={() => setAbaAtiva("ide")}
+              >
+                <span>💻</span>
+                <span>Mini-IDE (Código)</span>
+              </TabBotaoStl>
+
+              <TabBotaoStl
+                $ativa={abaAtiva === "ciclo3070"}
+                onClick={() => setAbaAtiva("ciclo3070")}
+              >
+                <span>🎯</span>
+                <span>Ciclo 30/70</span>
+              </TabBotaoStl>
+
+              <TabBotaoStl
+                $ativa={abaAtiva === "streak"}
+                onClick={() => setAbaAtiva("streak")}
+              >
+                <span>⚡</span>
+                <span>Dose Diária (Anki)</span>
+              </TabBotaoStl>
+
+              <TabBotaoStl
+                $ativa={abaAtiva === "flashcards"}
+                onClick={() => setAbaAtiva("flashcards")}
+              >
+                <span>🗂️</span>
+                <span>Cards</span>
+                <TabBadgeCountStl $ativa={abaAtiva === "flashcards"}>
+                  {cards.length}
+                </TabBadgeCountStl>
+              </TabBotaoStl>
+
+              <TabBotaoStl
+                $ativa={abaAtiva === "editais"}
+                onClick={() => setAbaAtiva("editais")}
+              >
+                <span>📋</span>
+                <span>Editais</span>
+                <TabBadgeCountStl $ativa={abaAtiva === "editais"}>
+                  {editais.length}
+                </TabBadgeCountStl>
+              </TabBotaoStl>
+
+              <TabBotaoStl
+                $ativa={abaAtiva === "overview"}
+                onClick={() => setAbaAtiva("overview")}
+              >
+                <span>📊</span>
+                <span>Próximas Etapas</span>
+              </TabBotaoStl>
+            </NavegacaoSegmentadaContainerStl>
+
+            {/* 3. CONTEÚDO DO MÓDULO ATIVO */}
+            {abaAtiva === "redacao" && (
+              <RedacaoLaboratorio editalAtivo={editalAtivo} />
+            )}
+
+            {abaAtiva === "ide" && (
+              <MiniIDEArena editalAtivo={editalAtivo} />
+            )}
+
+            {abaAtiva === "ciclo3070" && (
+              <CicloEstudos3070 editalAtivo={editalAtivo} />
+            )}
+
+            {abaAtiva === "streak" && (
+              <DailyStreakPlayer
+                cards={cards}
+                onResponder={handleResponderCard}
+                cardsRevisadosHoje={cardsRevisadosHoje}
+                metaDiaria={META_DIARIA}
+              />
+            )}
+
+            {abaAtiva === "flashcards" && (
+              <FlashcardManager
+                editalAtivo={editalAtivo}
+                cards={cards}
+                onRecarregar={carregarFlashcards}
+              />
+            )}
+
+            {abaAtiva === "editais" && (
+              <EditalManager
+                editais={editais}
+                onRecarregar={carregarEditais}
+                editalSelecionado={editalAtivo}
+                onSelecionarEdital={(e) => e && selecionarEdital(e.id)}
+              />
+            )}
+
+            {abaAtiva === "overview" && (
+              <CardStl $destaqueBorda style={{ padding: "1.75rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
+                  <div>
+                    <PillBadgeStl $variante="sucesso">Arquitetura Completa</PillBadgeStl>
+                    <TitulosSecundariosStl style={{ marginTop: "0.5rem" }}>
+                      Guia de Estudos TI • Roadmap & Engenharia
+                    </TitulosSecundariosStl>
+                  </div>
+                </div>
+
+                <ParagrafosStl $secundario style={{ marginTop: "0.5rem" }}>
+                  Todos os módulos encontram-se plenamente operacionais e integrados ao ecossistema:
+                </ParagrafosStl>
+
+                <div style={{ marginTop: "1.25rem", display: "flex", flexDirection: "column", gap: "0.85rem" }}>
+                  <ParagrafosStl>✅ <strong>Etapa 1</strong>: Design System Café/Dark, Styled-Components puro, Contraste AAA e Fontes Aldrich/Almarai.</ParagrafosStl>
+                  <ParagrafosStl>✅ <strong>Etapa 2</strong>: Supabase (Auth por username 'SirReinato', RLS seguro sem recursão, Painel Administrativo com aprovação).</ParagrafosStl>
+                  <ParagrafosStl>✅ <strong>Etapa 3</strong>: Mapeador de Edital & Árvore Hierárquica de Disciplinas e Tópicos com pesos de 1 a 5 estrelas.</ParagrafosStl>
+                  <ParagrafosStl>✅ <strong>Etapa 4</strong>: Dose Diária (Micro-learning, Repetição Espaçada SM-2, Meta de 5 cards diários, Flip 3D).</ParagrafosStl>
+                  <ParagrafosStl>✅ <strong>Etapa 5</strong>: Ciclo 30/70 (30% Teoria Ativa em Markdown + 70% Bateria de Questões comentadas).</ParagrafosStl>
+                  <ParagrafosStl>✅ <strong>Etapa 6</strong>: Mini-IDE & Desafios Práticos de Código para TI (SQL, Python, JS com Monaco Editor).</ParagrafosStl>
+                  <ParagrafosStl>✅ <strong>Etapa 7</strong>: Laboratório de Redação & Discursivas Técnicas de TI (Folha Pautada, Limite de Linhas, Espelho Oficial).</ParagrafosStl>
+                  <ParagrafosStl>✅ <strong>Etapa 8</strong>: Inteligência Artificial (Google Gemini 3.8 Flash, Extração de PDF e Provas Anteriores com Retry 503).</ParagrafosStl>
+                  <ParagrafosStl>🚀 <strong>Modo Edital Centralizado & Redesign Moderno</strong>: Toda a plataforma converge de forma intuitiva, fluida e responsiva ao concurso ativo.</ParagrafosStl>
+                </div>
+              </CardStl>
+            )}
+          </>
+        )}
+      </MainContentWrapperStl>
+    </AppLayoutStl>
   );
 };
 
