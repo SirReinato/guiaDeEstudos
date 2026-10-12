@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import styled from "styled-components";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { AuthModal } from "./components/AuthModal";
 import { AdminPanel } from "./components/AdminPanel";
+import { EditalManager } from "./components/EditalManager";
+import { editaisService, type EditalCompleto } from "./services/editaisService";
 import { supabase } from "./services/supabase";
 import {
   theme,
@@ -12,7 +14,6 @@ import {
   ParagrafosStl,
   BotaoSecundarioStl,
   CardStl,
-  DividerGradienteStl,
   BadgeStl,
 } from "./theme/theme";
 
@@ -65,13 +66,33 @@ const UserBarStl = styled.div`
   gap: 1rem;
 `;
 
-const GradeModulosStl = styled.div`
+const AbaNavegacaoContainerStl = styled.div`
+  display: flex;
+  gap: 0.75rem;
   width: 100%;
   max-width: 1100px;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 1.5rem;
-  margin: 1.5rem 0;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+`;
+
+const AbaBotaoStl = styled.button<{ $ativa: boolean }>`
+  font-family: ${theme.fontsFamily.titulos};
+  font-size: ${theme.fontSize.paragrafos.pp};
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 0.65rem 1.25rem;
+  border-radius: 8px;
+  cursor: pointer;
+  background: ${(props) =>
+    props.$ativa ? theme.colors.gradients.btnPrimario : "transparent"};
+  color: ${theme.colors.textos.claroPrincipal};
+  border: ${(props) =>
+    props.$ativa ? `1px solid ${theme.colors.marfim}` : theme.colors.borders.suave};
+  transition: all 0.2s ease-in-out;
+
+  &:hover {
+    border-color: ${theme.colors.marfim};
+  }
 `;
 
 const BloqueioAvisoStl = styled.div`
@@ -88,26 +109,45 @@ const BloqueioAvisoStl = styled.div`
 const DashboardConteudo: React.FC = () => {
   const { user, profile, signOut, loading } = useAuth();
   const [supabaseConectado, setSupabaseConectado] = useState<boolean>(false);
-  const [tabelasStatus, setTabelasStatus] = useState<string>("Verificando...");
   const [mostrarPainelAdmin, setMostrarPainelAdmin] = useState<boolean>(false);
+  const [abaAtiva, setAbaAtiva] = useState<"editais" | "overview">("editais");
+
+  // Dados dos editais
+  const [editais, setEditais] = useState<EditalCompleto[]>([]);
+  const [editalSelecionado, setEditalSelecionado] = useState<EditalCompleto | null>(null);
+
+  const carregarEditais = useCallback(async () => {
+    if (!user) return;
+    const { data } = await editaisService.listarEditais();
+    if (data) {
+      setEditais(data);
+      // Se tiver edital selecionado, atualiza-lo na lista
+      if (editalSelecionado) {
+        const atualizado = data.find((e) => e.id === editalSelecionado.id) || null;
+        setEditalSelecionado(atualizado);
+      } else if (data.length > 0) {
+        setEditalSelecionado(data[0]);
+      }
+    }
+  }, [user, editalSelecionado]);
 
   useEffect(() => {
     const testarConexao = async () => {
       try {
-        const { error } = await supabase.from("profiles").select("count", { count: "exact", head: true });
+        await supabase.from("profiles").select("count", { count: "exact", head: true });
         setSupabaseConectado(true);
-        if (error && error.code === "PGRST205") {
-          setTabelasStatus("Conectado! Tabela de perfis aguarda execução do SQL de migração.");
-        } else {
-          setTabelasStatus("Conectado com sucesso ao Supabase PostgreSQL & Perfis!");
-        }
-      } catch (err: unknown) {
-        console.error("Falha de ping Supabase:", err);
-        setSupabaseConectado(true);
+      } catch (err) {
+        console.error("Erro ping:", err);
       }
     };
     testarConexao();
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      carregarEditais();
+    }
+  }, [user, carregarEditais]);
 
   const isAdmin = profile?.role === "admin" || profile?.username?.toLowerCase() === "sirreinato";
   const isPending = profile?.status === "pending" && !isAdmin;
@@ -128,7 +168,7 @@ const DashboardConteudo: React.FC = () => {
         </ParagrafosStl>
       </HeaderStl>
 
-      {/* Barra de Usuário Autenticado OU Painel de Login */}
+      {/* Sessão do Usuário */}
       {loading ? (
         <ParagrafosStl $centro>Carregando perfil e sessão de estudos...</ParagrafosStl>
       ) : user ? (
@@ -173,20 +213,17 @@ const DashboardConteudo: React.FC = () => {
             </div>
           </UserBarStl>
 
-          {/* Painel de Administração exclusivo de SirReinato */}
+          {/* Painel Administrativo de Usuários */}
           {isAdmin && mostrarPainelAdmin && <AdminPanel />}
 
-          {/* Bloqueio amigável se usuário não for admin e estiver pendente */}
+          {/* Bloqueio se pendente */}
           {isPending && (
             <BloqueioAvisoStl>
               <TitulosSecundariosStl style={{ fontSize: "1.3rem", color: "#FFB74D" }}>
                 ⏳ Cadastro em Análise
               </TitulosSecundariosStl>
               <ParagrafosStl style={{ marginTop: "0.75rem" }}>
-                Olá, <strong>{profile?.username}</strong>! Sua solicitação de cadastro foi recebida e está aguardando a aprovação do Administrador (<strong>SirReinato</strong>).
-              </ParagrafosStl>
-              <ParagrafosStl $secundario style={{ marginTop: "0.5rem", fontSize: "0.85rem" }}>
-                Assim que sua conta for aprovada, todos os módulos de estudo serão liberados automaticamente.
+                Olá, <strong>{profile?.username}</strong>! Sua solicitação está aguardando a aprovação de <strong>SirReinato</strong>.
               </ParagrafosStl>
             </BloqueioAvisoStl>
           )}
@@ -202,86 +239,47 @@ const DashboardConteudo: React.FC = () => {
             </BloqueioAvisoStl>
           )}
 
-          {/* Conteúdo Normal liberado para Usuários Ativos ou Admin */}
-          {(!isPending && !isRejected) && (
+          {/* Navegação e Conteúdo de Estudos */}
+          {!isPending && !isRejected && (
             <>
-              <DividerGradienteStl />
+              <AbaNavegacaoContainerStl>
+                <AbaBotaoStl
+                  $ativa={abaAtiva === "editais"}
+                  onClick={() => setAbaAtiva("editais")}
+                >
+                  📋 Módulo 1: Editais & Disciplinas
+                </AbaBotaoStl>
+                <AbaBotaoStl
+                  $ativa={abaAtiva === "overview"}
+                  onClick={() => setAbaAtiva("overview")}
+                >
+                  📊 Visão dos Módulos Futuros
+                </AbaBotaoStl>
+              </AbaNavegacaoContainerStl>
 
-              <CardStl $destaqueBorda style={{ maxWidth: "1100px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <TitulosSecundariosStl>Diagnóstico da Conexão Supabase</TitulosSecundariosStl>
-                  <BadgeStl>PostgreSQL Nuvem</BadgeStl>
-                </div>
-
-                <ParagrafosStl style={{ marginTop: "1rem" }}>
-                  <strong>URL do Projeto:</strong> https://tfsvfipsijtrzovbmmeq.supabase.co
-                </ParagrafosStl>
-                <ParagrafosStl $secundario style={{ marginTop: "0.5rem" }}>
-                  <strong>Status da Conexão:</strong> {tabelasStatus}
-                </ParagrafosStl>
-              </CardStl>
-
-              <GradeModulosStl>
-                <CardStl>
-                  <BadgeStl>Módulo 01</BadgeStl>
-                  <TitulosSecundariosStl style={{ marginTop: "0.75rem" }}>
-                    Edital & Provas
-                  </TitulosSecundariosStl>
+              {abaAtiva === "editais" ? (
+                <EditalManager
+                  editais={editais}
+                  onRecarregar={carregarEditais}
+                  editalSelecionado={editalSelecionado}
+                  onSelecionarEdital={(e) => setEditalSelecionado(e)}
+                />
+              ) : (
+                <CardStl $destaqueBorda style={{ maxWidth: "1100px", margin: "1rem 0" }}>
+                  <TitulosSecundariosStl>Ecossistema de Estudos Integrado</TitulosSecundariosStl>
                   <ParagrafosStl $secundario style={{ marginTop: "0.5rem" }}>
-                    Cadastro de editais e decomposição inteligente de disciplinas e tópicos de TI.
+                    Toda a estrutura criada em <strong>Editais e Disciplinas</strong> alimentará
+                    automaticamente as próximas etapas:
                   </ParagrafosStl>
-                </CardStl>
 
-                <CardStl>
-                  <BadgeStl>Módulo 02</BadgeStl>
-                  <TitulosSecundariosStl style={{ marginTop: "0.75rem" }}>
-                    Dose Diária (Anki)
-                  </TitulosSecundariosStl>
-                  <ParagrafosStl $secundario style={{ marginTop: "0.5rem" }}>
-                    Repetição espaçada com algoritmo SM-2 para retenção rápida diária.
-                  </ParagrafosStl>
+                  <div style={{ marginTop: "1rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                    <ParagrafosStl>• <strong>Etapa 4 (Dose Diária / Anki)</strong>: Gera flashcards por disciplina com algoritmo SM-2.</ParagrafosStl>
+                    <ParagrafosStl>• <strong>Etapa 5 (Ciclo 30/70)</strong>: Abre resumos teóricos (30%) e baterias de questões (70%) do edital selecionado.</ParagrafosStl>
+                    <ParagrafosStl>• <strong>Etapa 6 (Mini-IDE TI)</strong>: Desafios de código focados nas tecnologias do edital ativo.</ParagrafosStl>
+                    <ParagrafosStl>• <strong>Etapa 7 (Oficina de Redação)</strong>: Discursivas nos temas quentes do edital.</ParagrafosStl>
+                  </div>
                 </CardStl>
-
-                <CardStl>
-                  <BadgeStl>Módulo 03</BadgeStl>
-                  <TitulosSecundariosStl style={{ marginTop: "0.75rem" }}>
-                    Ciclo 30/70
-                  </TitulosSecundariosStl>
-                  <ParagrafosStl $secundario style={{ marginTop: "0.5rem" }}>
-                    30% Teoria condensada em markdown e 70% Questões comentadas de bancas.
-                  </ParagrafosStl>
-                </CardStl>
-
-                <CardStl>
-                  <BadgeStl>Módulo 04</BadgeStl>
-                  <TitulosSecundariosStl style={{ marginTop: "0.75rem" }}>
-                    Mini-IDE Concursos
-                  </TitulosSecundariosStl>
-                  <ParagrafosStl $secundario style={{ marginTop: "0.5rem" }}>
-                    Resolução prática de desafios de código (SQL, Python, Javascript).
-                  </ParagrafosStl>
-                </CardStl>
-
-                <CardStl>
-                  <BadgeStl>Módulo 05</BadgeStl>
-                  <TitulosSecundariosStl style={{ marginTop: "0.75rem" }}>
-                    Laboratório de Redações
-                  </TitulosSecundariosStl>
-                  <ParagrafosStl $secundario style={{ marginTop: "0.5rem" }}>
-                    Espelho de prova discursiva técnica de TI com contagem de linhas.
-                  </ParagrafosStl>
-                </CardStl>
-
-                <CardStl>
-                  <BadgeStl>Administração</BadgeStl>
-                  <TitulosSecundariosStl style={{ marginTop: "0.75rem" }}>
-                    Acesso Exclusivo
-                  </TitulosSecundariosStl>
-                  <ParagrafosStl $secundario style={{ marginTop: "0.5rem" }}>
-                    Painel protegido com aprovação de novos cadastros externos.
-                  </ParagrafosStl>
-                </CardStl>
-              </GradeModulosStl>
+              )}
             </>
           )}
         </>
