@@ -14,6 +14,7 @@ import {
   cicloEstudosService,
   type QuestaoComDetalhes,
 } from "../services/cicloEstudosService";
+import { geminiService } from "../services/geminiService";
 import type { EditalCompleto } from "../services/editaisService";
 import type { TeoriaResumo } from "../types/database";
 
@@ -325,6 +326,45 @@ A **Normalização de Dados** tem como objetivo eliminar anomalias de inserção
     setQuestoes(questoesNovas || []);
   };
 
+  const handleGerarQuestaoComIA = async () => {
+    if (!topicoSelecionadoId) return;
+    const topicoObj = topicosDisponiveis.find((t) => t.id === topicoSelecionadoId);
+    if (!topicoObj) return;
+
+    if (!import.meta.env.VITE_GEMINI_API_KEY) {
+      alert("Para gerar questões com IA em tempo real, informe sua chave em VITE_GEMINI_API_KEY no arquivo .env");
+      return;
+    }
+
+    try {
+      const nova = await geminiService.gerarQuestaoInedita({
+        topico: topicoObj.titulo,
+        banca: editalAtivo?.banca || "Cebraspe",
+        tipo: "multipla_escolha",
+      });
+
+      if (nova) {
+        await cicloEstudosService.criarQuestao({
+          topicoId: topicoSelecionadoId,
+          enunciado: nova.enunciado,
+          tipo: "multipla_escolha",
+          alternativas: nova.alternativas,
+          respostaCorreta: nova.respostaCorreta,
+          explicacaoDetalhada: nova.explicacaoDetalhada,
+          bancaOrigem: `${editalAtivo?.banca || "Banca"} (Gerada por IA)`,
+          anoOrigem: new Date().getFullYear(),
+        });
+
+        const { data: questoesNovas } = await cicloEstudosService.listarQuestoes(topicoSelecionadoId);
+        setQuestoes(questoesNovas || []);
+        alert("✨ Nova questão técnica gerada com sucesso pela IA!");
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Erro";
+      alert(`Falha na IA: ${msg}`);
+    }
+  };
+
   const handleSelecionarAlternativa = (questaoId: string, letra: string) => {
     if (questoesReveladas[questaoId]) return; // Já respondida
     setRespostasUsuario((prev) => ({ ...prev, [questaoId]: letra }));
@@ -373,9 +413,14 @@ A **Normalização de Dados** tem como objetivo eliminar anomalias de inserção
           </ParagrafosStl>
         )}
 
-        <BotaoSecundarioStl style={{ fontSize: "0.8rem" }} onClick={handleSemearCicloDemonstracao}>
-          ⚡ Carregar Teoria & Questões de Exemplo
-        </BotaoSecundarioStl>
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+          <BotaoPrimarioStl style={{ fontSize: "0.8rem", padding: "0.5rem 1rem" }} onClick={handleGerarQuestaoComIA}>
+            ✨ Gerar Questão Inédita com IA
+          </BotaoPrimarioStl>
+          <BotaoSecundarioStl style={{ fontSize: "0.8rem" }} onClick={handleSemearCicloDemonstracao}>
+            ⚡ Carregar Teoria & Questões de Exemplo
+          </BotaoSecundarioStl>
+        </div>
       </SeletorTopicoBarStl>
 
       {/* Placar de Aproveitamento das Questões */}
