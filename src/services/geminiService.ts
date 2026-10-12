@@ -9,6 +9,104 @@ export const geminiService = {
     return Boolean(import.meta.env.VITE_GEMINI_API_KEY);
   },
 
+  // 0. Dissecação Automática do Edital (Extração de Disciplinas e Tópicos com pesos)
+  async dissecarEditalComIA(textoEdital: string): Promise<{
+    disciplinas: Array<{
+      nome: string;
+      topicos: Array<{
+        titulo: string;
+        relevancia_banca: number; // 1 a 5
+      }>;
+    }>;
+  } | null> {
+    const key = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!key) return null;
+
+    const ai = new GoogleGenAI({ apiKey: key });
+
+    const prompt = `Você é um especialista em análise de editais de concursos públicos de Tecnologia da Informação (TI).
+Analise o trecho do conteúdo programático do edital fornecido abaixo.
+Extraia as Disciplinas principais e os Tópicos correspondentes.
+Para cada tópico, estime a 'relevancia_banca' de 1 a 5 (onde 5 é tema de altíssima incidência nas provas e 1 é tema raro).
+
+Texto do Edital:
+"""
+${textoEdital.slice(0, 30000)}
+"""
+
+Responda OBRIGATORIAMENTE em JSON válido com esta estrutura exata:
+{
+  "disciplinas": [
+    {
+      "nome": "Nome da Disciplina (ex: Banco de Dados)",
+      "topicos": [
+        {
+          "titulo": "Título do Tópico (ex: Normalização e Álgebra Relacional)",
+          "relevancia_banca": 5
+        }
+      ]
+    }
+  ]
+}`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.8-flash",
+      contents: prompt,
+      config: { responseMimeType: "application/json" },
+    });
+
+    try {
+      return JSON.parse(response.text || "{}");
+    } catch (err) {
+      console.error("Erro ao converter JSON do edital:", err);
+      return null;
+    }
+  },
+
+  // 0.1 Análise de Provas Anteriores (Cruza edital com histórico de provas para reajustar pesos e gerar questões)
+  async analisarProvasAnteriores(textoProvas: string, disciplinasAtuais: string[]): Promise<{
+    topicosMaisCobrados: string[];
+    recomendacoesEstudo: string;
+    novosTopicosDetectados?: Array<{ disciplina: string; topico: string; relevancia: number }>;
+  } | null> {
+    const key = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!key) return null;
+
+    const ai = new GoogleGenAI({ apiKey: key });
+
+    const prompt = `Você é um analista de bancas de concurso de TI.
+Analise o texto das provas anteriores fornecido abaixo, considerando as seguintes disciplinas do edital:
+${disciplinasAtuais.join(", ")}
+
+Texto das Provas Anteriores:
+"""
+${textoProvas.slice(0, 30000)}
+"""
+
+Identifique o padrão de cobrança da banca, os temas com maior repetição de pegadinhas e gere recomendações práticas de estudo.
+Responda OBRIGATORIAMENTE em JSON:
+{
+  "topicosMaisCobrados": ["Tópico 1", "Tópico 2"],
+  "recomendacoesEstudo": "Análise estratégica do perfil da banca e pegadinhas...",
+  "novosTopicosDetectados": [
+    {"disciplina": "Banco de Dados", "topico": "Window Functions", "relevancia": 5}
+  ]
+}`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.8-flash",
+      contents: prompt,
+      config: { responseMimeType: "application/json" },
+    });
+
+    try {
+      return JSON.parse(response.text || "{}");
+    } catch (err) {
+      console.error("Erro ao converter JSON de provas:", err);
+      return null;
+    }
+  },
+
   // 1. Gerar Nova Questão de TI Inédita no Padrão da Banca
   async gerarQuestaoInedita(payload: {
     topico: string;

@@ -11,6 +11,8 @@ import {
 } from "../theme/theme";
 import { editaisService, type EditalCompleto } from "../services/editaisService";
 import { useAuth } from "../contexts/AuthContext";
+import { extrairTextoDeArquivo } from "../utils/pdfExtractor";
+import { geminiService } from "../services/geminiService";
 
 const ContainerStl = styled.div`
   width: 100%;
@@ -19,6 +21,29 @@ const ContainerStl = styled.div`
   flex-direction: column;
   gap: 1.5rem;
   margin: 1.5rem 0;
+`;
+
+const UploadZoneStl = styled.div<{ $ativo?: boolean }>`
+  border: 2px dashed ${(props) => (props.$ativo ? theme.colors.marfim : theme.colors.ambarQueimado)};
+  background-color: ${theme.colors.preto};
+  border-radius: 12px;
+  padding: 2rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+
+  &:hover {
+    border-color: ${theme.colors.marfim};
+    background-color: rgba(65, 45, 21, 0.15);
+  }
+`;
+
+const InputArquivoOculto = styled.input`
+  display: none;
 `;
 
 const FormGridStl = styled.form`
@@ -55,7 +80,6 @@ const InputStl = styled.input`
 
   &:focus {
     border-color: ${theme.colors.marfim};
-    box-shadow: 0 0 0 2px rgba(225, 220, 201, 0.2);
   }
 `;
 
@@ -69,10 +93,6 @@ const SelectStl = styled.select`
   font-family: ${theme.fontsFamily.paragrafos};
   font-size: ${theme.fontSize.paragrafos.mm};
   box-sizing: border-box;
-
-  &:focus {
-    border-color: ${theme.colors.marfim};
-  }
 `;
 
 const EditalItemCardStl = styled.div<{ $selecionado: boolean }>`
@@ -136,6 +156,15 @@ const RelevanciaEstrelasStl = styled.span`
   letter-spacing: 2px;
 `;
 
+const InsightBoxStl = styled.div`
+  background-color: rgba(65, 45, 21, 0.2);
+  border: 1px solid ${theme.colors.marfim};
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-top: 1rem;
+  line-height: 1.6;
+`;
+
 interface Props {
   editais: EditalCompleto[];
   onRecarregar: () => void;
@@ -156,22 +185,130 @@ export const EditalManager: React.FC<Props> = ({
   const [novoAno, setNovoAno] = useState(new Date().getFullYear());
   const [salvandoEdital, setSalvandoEdital] = useState(false);
 
-  // Estados para nova disciplina
-  const [nomeDisciplina, setNomeDisciplina] = useState("");
-  const [adicionandoDisc, setAdicionandoDisc] = useState(false);
+  // Estados de IA & Upload
+  const [processandoIA, setProcessandoIA] = useState(false);
+  const [statusProgressoIA, setStatusProgressoIA] = useState("");
+  const [insightsProvas, setInsightsProvas] = useState<string | null>(null);
 
-  // Estados para novo tópico
-  const [disciplinaAtivaId, setDisciplinaAtivaId] = useState<string | null>(null);
-  const [tituloTopico, setTituloTopico] = useState("");
-  const [relevanciaTopico, setRelevanciaTopico] = useState(4);
+  // 1. UPLOAD E DISSECAÇÃO AUTOMÁTICA DE EDITAL (PDF ou TXT)
+  const handleUploadEditalArquivo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
 
-  // Criar Edital
-  const handleCriarEdital = async (e: React.FormEvent) => {
+    try {
+      setProcessandoIA(true);
+      setStatusProgressoIA(`Lendo arquivo "${file.name}"...`);
+
+      const textoExtraido = await extrairTextoDeArquivo(file);
+      if (!textoExtraido || textoExtraido.trim().length < 50) {
+        alert("O arquivo não possui texto legível suficiente.");
+        setProcessandoIA(false);
+        return;
+      }
+
+      setStatusProgressoIA("🤖 Inteligência Artificial dissecando o edital e extraindo disciplinas...");
+      const resultadoIA = await geminiService.dissecarEditalComIA(textoExtraido);
+
+      if (!resultadoIA || !resultadoIA.disciplinas || resultadoIA.disciplinas.length === 0) {
+        alert("A IA não conseguiu identificar disciplinas claras. Tente um trecho mais direto do edital.");
+        setProcessandoIA(false);
+        return;
+      }
+
+      setStatusProgressoIA(`Salvando edital e ${resultadoIA.disciplinas.length} disciplinas no banco...`);
+
+      // 1. Criar o edital
+      const nomeEdital = file.name.replace(/\.[^/.]+$/, "");
+      const { data: editalCriado, error: errEdital } = await editaisService.criarEdital({
+        titulo: `Concurso: ${nomeEdital}`,
+        banca: novaBanca,
+        orgao: novoOrgao || "Órgão do Edital",
+        ano: Number(novoAno),
+        user_id: user.id,
+      });
+
+      if (errEdital || !editalCriado) {
+        throw new Error(errEdital?.message || "Erro ao salvar edital.");
+      }
+
+      // 2. Criar disciplinas e tópicos com as relevâncias estimadas pela IA
+      for (const disc of resultadoIA.disciplinas) {
+        const { data: discCriada } = await editaisService.criarDisciplina(editalCriado.id, disc.nome);
+        if (discCriada && disc.topicos) {
+          for (const top of disc.topicos) {
+            await editaisService.criarTopico({
+              disciplinaId: discCriada.id,
+              titulo: top.titulo,
+              relevanciaBanca: top.relevancia_banca || 4,
+            });
+          }
+        }
+      }
+
+      setStatusProgressoIA("✨ Edital 100% mapeado e estruturado pela IA com sucesso!");
+      onRecarregar();
+      onSelecionarEdital(editalCriado as EditalCompleto);
+      alert(`🎉 Edital dissecado com sucesso! Foram extraídas ${resultadoIA.disciplinas.length} matérias estruturadas.`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Erro";
+      alert(`Falha no processamento: ${msg}`);
+    } finally {
+      setProcessandoIA(false);
+      setStatusProgressoIA("");
+    }
+  };
+
+  // 2. UPLOAD DE PROVAS ANTERIORES PARA A IA ANALISAR PADRÕES DA BANCA
+  const handleUploadProvaAnterior = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !editalSelecionado) {
+      alert("Selecione um edital ativo antes de enviar provas anteriores.");
+      return;
+    }
+
+    try {
+      setProcessandoIA(true);
+      setStatusProgressoIA(`Extraindo questões da prova "${file.name}"...`);
+
+      const textoProva = await extrairTextoDeArquivo(file);
+      const nomesDisciplinas = editalSelecionado.disciplinas?.map((d) => d.nome) || [];
+
+      setStatusProgressoIA("🤖 IA analisando incidência de temas e pegadinhas da banca...");
+      const analise = await geminiService.analisarProvasAnteriores(textoProva, nomesDisciplinas);
+
+      if (analise) {
+        setInsightsProvas(analise.recomendacoesEstudo);
+
+        // Se a prova continha novos tópicos quentes, adiciona na primeira disciplina
+        if (analise.novosTopicosDetectados && editalSelecionado.disciplinas?.[0]) {
+          for (const novo of analise.novosTopicosDetectados) {
+            await editaisService.criarTopico({
+              disciplinaId: editalSelecionado.disciplinas[0].id,
+              titulo: `[Foco Prova]: ${novo.topico}`,
+              relevanciaBanca: 5,
+            });
+          }
+          onRecarregar();
+        }
+
+        alert("🎯 Análise da prova concluída! A IA identificou os tópicos mais cobrados e ajustou os pesos.");
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Erro";
+      alert(`Falha ao analisar prova: ${msg}`);
+    } finally {
+      setProcessandoIA(false);
+      setStatusProgressoIA("");
+    }
+  };
+
+  // Criar Edital Manual
+  const handleCriarEditalManual = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !novoTitulo.trim()) return;
 
     setSalvandoEdital(true);
-    const { data, error } = await editaisService.criarEdital({
+    const { data } = await editaisService.criarEdital({
       titulo: novoTitulo.trim(),
       banca: novaBanca,
       orgao: novoOrgao.trim(),
@@ -179,85 +316,87 @@ export const EditalManager: React.FC<Props> = ({
       user_id: user.id,
     });
 
-    if (error) {
-      alert(`Erro ao criar edital: ${error.message}`);
-    } else {
-      setNovoTitulo("");
-      setNovoOrgao("");
-      onRecarregar();
-      if (data) {
-        onSelecionarEdital(data as EditalCompleto);
-      }
-    }
-    setSalvandoEdital(false);
-  };
-
-  // Excluir Edital
-  const handleExcluirEdital = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!confirm("Tem certeza que deseja excluir este edital e todo o conteúdo dele?")) return;
-    await editaisService.excluirEdital(id);
-    if (editalSelecionado?.id === id) {
-      onSelecionarEdital(null);
-    }
+    setNovoTitulo("");
+    setNovoOrgao("");
     onRecarregar();
-  };
-
-  // Adicionar Disciplina
-  const handleAdicionarDisciplina = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editalSelecionado || !nomeDisciplina.trim()) return;
-
-    setAdicionandoDisc(true);
-    const { error } = await editaisService.criarDisciplina(
-      editalSelecionado.id,
-      nomeDisciplina.trim()
-    );
-
-    if (error) {
-      alert(`Erro ao criar disciplina: ${error.message}`);
-    } else {
-      setNomeDisciplina("");
-      onRecarregar();
-    }
-    setAdicionandoDisc(false);
-  };
-
-  // Adicionar Tópico
-  const handleAdicionarTopico = async (disciplinaId: string) => {
-    if (!tituloTopico.trim()) return;
-
-    const { error } = await editaisService.criarTopico({
-      disciplinaId,
-      titulo: tituloTopico.trim(),
-      relevanciaBanca: relevanciaTopico,
-    });
-
-    if (error) {
-      alert(`Erro ao criar tópico: ${error.message}`);
-    } else {
-      setTituloTopico("");
-      setDisciplinaAtivaId(null);
-      onRecarregar();
-    }
+    if (data) onSelecionarEdital(data as EditalCompleto);
+    setSalvandoEdital(false);
   };
 
   return (
     <ContainerStl>
-      {/* 1. Card de Criação de Novo Edital */}
+      {/* 1. SEÇÃO DE INGESTÃO AUTOMÁTICA POR IA */}
       <CardStl $destaqueBorda>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <BadgeStl>Etapa 3 • Conteúdo Programático</BadgeStl>
-            <TitulosSecundariosStl style={{ marginTop: "0.5rem" }}>
-              Cadastrar Novo Edital de Concurso
-            </TitulosSecundariosStl>
-          </div>
+        <BadgeStl>Ingestão Inteligente via Gemini AI</BadgeStl>
+        <TitulosSecundariosStl style={{ marginTop: "0.5rem" }}>
+          🚀 Upload de Edital & Provas Anteriores
+        </TitulosSecundariosStl>
+        <ParagrafosStl $secundario style={{ marginTop: "0.5rem" }}>
+          Arraste ou selecione o <strong>PDF ou TXT do Edital</strong>. A inteligência artificial disseca o documento,
+          cria as matérias e pontua a relevância de cada tema automaticamente!
+        </ParagrafosStl>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "1rem", marginTop: "1.25rem" }}>
+          {/* Box de Upload do Edital */}
+          <label>
+            <InputArquivoOculto
+              type="file"
+              accept=".pdf,.txt"
+              onChange={handleUploadEditalArquivo}
+              disabled={processandoIA}
+            />
+            <UploadZoneStl>
+              <span style={{ fontSize: "2rem" }}>📄</span>
+              <strong style={{ fontSize: "1.05rem" }}>Subir Edital do Concurso (PDF/TXT)</strong>
+              <ParagrafosStl $secundario style={{ fontSize: "0.85rem" }}>
+                A IA extrai todo o conteúdo programático em segundos.
+              </ParagrafosStl>
+            </UploadZoneStl>
+          </label>
+
+          {/* Box de Upload de Provas Anteriores */}
+          <label>
+            <InputArquivoOculto
+              type="file"
+              accept=".pdf,.txt"
+              onChange={handleUploadProvaAnterior}
+              disabled={processandoIA || !editalSelecionado}
+            />
+            <UploadZoneStl $ativo={Boolean(editalSelecionado)}>
+              <span style={{ fontSize: "2rem" }}>🎯</span>
+              <strong style={{ fontSize: "1.05rem" }}>Alimentar Prova Anterior (PDF/TXT)</strong>
+              <ParagrafosStl $secundario style={{ fontSize: "0.85rem" }}>
+                {editalSelecionado
+                  ? `Cruzar questões reais com "${editalSelecionado.titulo}"`
+                  : "Selecione um edital abaixo para habilitar"}
+              </ParagrafosStl>
+            </UploadZoneStl>
+          </label>
         </div>
 
-        <FormGridStl onSubmit={handleCriarEdital}>
+        {processandoIA && (
+          <div style={{ marginTop: "1rem", textAlign: "center", color: theme.colors.marfim }}>
+            <span style={{ display: "inline-block", animation: "spin 1s linear infinite" }}>⏳</span>{" "}
+            <strong>{statusProgressoIA}</strong>
+          </div>
+        )}
+
+        {insightsProvas && (
+          <InsightBoxStl>
+            <strong>🧠 Raio-X da Banca Gerado pela IA:</strong>
+            <p style={{ marginTop: "0.5rem", fontSize: "0.95rem" }}>{insightsProvas}</p>
+          </InsightBoxStl>
+        )}
+      </CardStl>
+
+      {/* 2. CADASTRO MANUAL DE EDITAL (OPÇÃO ALTERNATIVA) */}
+      <CardStl style={{ padding: "1.25rem 1.5rem" }}>
+        <TitulosSecundariosStl style={{ fontSize: "1.15rem" }}>
+          Ou Cadastre Manualmente (Sem PDF):
+        </TitulosSecundariosStl>
+        <FormGridStl onSubmit={handleCriarEditalManual}>
           <CampoStl style={{ gridColumn: "span 2" }}>
-            <RotuloStl>Título do Concurso / Cargo</RotuloStl>
+            <RotuloStl>Título do Concurso</RotuloStl>
             <InputStl
               type="text"
               required
@@ -268,25 +407,13 @@ export const EditalManager: React.FC<Props> = ({
           </CampoStl>
 
           <CampoStl>
-            <RotuloStl>Banca Examinadora</RotuloStl>
+            <RotuloStl>Banca</RotuloStl>
             <SelectStl value={novaBanca} onChange={(e) => setNovaBanca(e.target.value)}>
-              <option value="Cebraspe">Cebraspe (Certo/Errado)</option>
-              <option value="FGV">FGV (Múltipla Escolha)</option>
-              <option value="FCC">FCC (Múltipla Escolha)</option>
+              <option value="Cebraspe">Cebraspe</option>
+              <option value="FGV">FGV</option>
+              <option value="FCC">FCC</option>
               <option value="Cesgranrio">Cesgranrio</option>
-              <option value="Vunesp">Vunesp</option>
-              <option value="Outra">Outra Banca</option>
             </SelectStl>
-          </CampoStl>
-
-          <CampoStl>
-            <RotuloStl>Órgão / Empresa</RotuloStl>
-            <InputStl
-              type="text"
-              placeholder="Ex: Tribunal de Contas da União"
-              value={novoOrgao}
-              onChange={(e) => setNovoOrgao(e.target.value)}
-            />
           </CampoStl>
 
           <CampoStl>
@@ -298,13 +425,13 @@ export const EditalManager: React.FC<Props> = ({
             />
           </CampoStl>
 
-          <BotaoPrimarioStl type="submit" disabled={salvandoEdital}>
-            {salvandoEdital ? "Cadastrando..." : "➕ Adicionar Edital"}
-          </BotaoPrimarioStl>
+          <BotaoSecundarioStl type="submit" disabled={salvandoEdital}>
+            {salvandoEdital ? "Salvando..." : "➕ Criar Manual"}
+          </BotaoSecundarioStl>
         </FormGridStl>
       </CardStl>
 
-      {/* 2. Seleção de Editais Cadastrados */}
+      {/* 3. LISTA DE EDITAIS */}
       <div>
         <TitulosSecundariosStl style={{ marginBottom: "1rem" }}>
           Seus Editais Cadastrados ({editais.length})
@@ -312,7 +439,7 @@ export const EditalManager: React.FC<Props> = ({
 
         {editais.length === 0 ? (
           <ParagrafosStl $secundario>
-            Você ainda não cadastrou nenhum edital. Utilize o formulário acima para criar o primeiro!
+            Nenhum edital cadastrado. Suba um PDF acima para a IA estruturar seus estudos!
           </ParagrafosStl>
         ) : (
           <div
@@ -337,18 +464,23 @@ export const EditalManager: React.FC<Props> = ({
                   {ed.titulo}
                 </TitulosSecundariosStl>
                 <ParagrafosStl $secundario style={{ fontSize: "0.85rem" }}>
-                  {ed.orgao || "Órgão não informado"} • {ed.disciplinas?.length || 0} Disciplina(s)
+                  {ed.orgao || "Órgão"} • {ed.disciplinas?.length || 0} Disciplina(s)
                 </ParagrafosStl>
 
                 <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
-                  <BotaoPrimarioStl
-                    style={{ fontSize: "0.75rem", padding: "0.4rem 0.8rem", width: "100%" }}
-                  >
+                  <BotaoPrimarioStl style={{ fontSize: "0.75rem", padding: "0.4rem 0.8rem", width: "100%" }}>
                     {editalSelecionado?.id === ed.id ? "✓ Edital Ativo" : "Selecionar Edital"}
                   </BotaoPrimarioStl>
                   <BotaoSecundarioStl
                     style={{ fontSize: "0.75rem", padding: "0.4rem 0.8rem" }}
-                    onClick={(e) => handleExcluirEdital(ed.id, e)}
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      if (confirm("Excluir este edital?")) {
+                        await editaisService.excluirEdital(ed.id);
+                        if (editalSelecionado?.id === ed.id) onSelecionarEdital(null);
+                        onRecarregar();
+                      }
+                    }}
                   >
                     🗑️
                   </BotaoSecundarioStl>
@@ -359,112 +491,36 @@ export const EditalManager: React.FC<Props> = ({
         )}
       </div>
 
-      {/* 3. Árvore de Disciplinas e Tópicos do Edital Selecionado */}
+      {/* 4. ÁRVORE HIERÁRQUICA ESTATÍSTICA DO EDITAL ATIVO */}
       {editalSelecionado && (
         <CardStl $destaqueBorda style={{ marginTop: "1rem" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
-              <BadgeStl>Edital Selecionado</BadgeStl>
+              <BadgeStl>Conteúdo Programático Dissecado</BadgeStl>
               <TitulosSecundariosStl style={{ marginTop: "0.4rem" }}>
-                Conteúdo Programático: {editalSelecionado.titulo}
+                {editalSelecionado.titulo} ({editalSelecionado.disciplinas?.length || 0} Matérias)
               </TitulosSecundariosStl>
             </div>
-
-            {/* Formulário para adicionar Disciplina */}
-            <form onSubmit={handleAdicionarDisciplina} style={{ display: "flex", gap: "0.5rem" }}>
-              <InputStl
-                type="text"
-                placeholder="Nova disciplina (ex: Banco de Dados)"
-                value={nomeDisciplina}
-                onChange={(e) => setNomeDisciplina(e.target.value)}
-                style={{ width: "250px" }}
-              />
-              <BotaoPrimarioStl type="submit" disabled={adicionandoDisc} style={{ fontSize: "0.85rem" }}>
-                {adicionandoDisc ? "Salvando..." : "➕ Disciplina"}
-              </BotaoPrimarioStl>
-            </form>
           </div>
 
           <ArvoreContainerStl>
             {(!editalSelecionado.disciplinas || editalSelecionado.disciplinas.length === 0) ? (
               <ParagrafosStl $secundario style={{ padding: "1.5rem 0", textAlign: "center" }}>
-                Nenhuma disciplina cadastrada neste edital ainda. Adicione a primeira disciplina acima!
+                Nenhuma disciplina cadastrada neste edital ainda.
               </ParagrafosStl>
             ) : (
               editalSelecionado.disciplinas.map((disc) => (
                 <DisciplinaCardStl key={disc.id}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <TitulosSecundariosStl style={{ fontSize: "1.25rem" }}>
-                      📖 {disc.nome}
+                      📖 {disc.nome} ({disc.topicos?.length || 0} Tópicos)
                     </TitulosSecundariosStl>
-                    <div style={{ display: "flex", gap: "0.5rem" }}>
-                      <BotaoSecundarioStl
-                        style={{ fontSize: "0.75rem", padding: "0.35rem 0.75rem" }}
-                        onClick={() =>
-                          setDisciplinaAtivaId(disciplinaAtivaId === disc.id ? null : disc.id)
-                        }
-                      >
-                        {disciplinaAtivaId === disc.id ? "Cancelar" : "➕ Adicionar Tópico"}
-                      </BotaoSecundarioStl>
-                      <BotaoSecundarioStl
-                        style={{ fontSize: "0.75rem", padding: "0.35rem 0.6rem" }}
-                        onClick={async () => {
-                          if (confirm(`Excluir a disciplina "${disc.nome}"?`)) {
-                            await editaisService.excluirDisciplina(disc.id);
-                            onRecarregar();
-                          }
-                        }}
-                      >
-                        ✕
-                      </BotaoSecundarioStl>
-                    </div>
                   </div>
 
-                  {/* Form inline para novo tópico na disciplina */}
-                  {disciplinaAtivaId === disc.id && (
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: "0.5rem",
-                        padding: "0.75rem",
-                        backgroundColor: theme.colors.background.card,
-                        borderRadius: "6px",
-                        alignItems: "center",
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      <InputStl
-                        type="text"
-                        placeholder="Nome do Tópico (Ex: Índices B-Tree vs Hash)"
-                        value={tituloTopico}
-                        onChange={(e) => setTituloTopico(e.target.value)}
-                        style={{ flex: 1, minWidth: "200px" }}
-                      />
-                      <SelectStl
-                        value={relevanciaTopico}
-                        onChange={(e) => setRelevanciaTopico(Number(e.target.value))}
-                        style={{ width: "160px" }}
-                      >
-                        <option value={5}>⭐⭐⭐⭐⭐ Altíssima</option>
-                        <option value={4}>⭐⭐⭐⭐ Alta</option>
-                        <option value={3}>⭐⭐⭐ Média</option>
-                        <option value={2}>⭐⭐ Baixa</option>
-                        <option value={1}>⭐ Rara</option>
-                      </SelectStl>
-                      <BotaoPrimarioStl
-                        style={{ fontSize: "0.8rem", padding: "0.5rem 1rem" }}
-                        onClick={() => handleAdicionarTopico(disc.id)}
-                      >
-                        Salvar Tópico
-                      </BotaoPrimarioStl>
-                    </div>
-                  )}
-
-                  {/* Grade de tópicos da disciplina */}
                   <TopicosGridStl>
                     {(!disc.topicos || disc.topicos.length === 0) ? (
                       <ParagrafosStl $secundario style={{ fontSize: "0.85rem", fontStyle: "italic" }}>
-                        Nenhum tópico cadastrado nesta matéria ainda.
+                        Nenhum tópico nesta disciplina.
                       </ParagrafosStl>
                     ) : (
                       disc.topicos.map((top) => (
@@ -473,22 +529,11 @@ export const EditalManager: React.FC<Props> = ({
                             <ParagrafosStl style={{ fontWeight: 600, fontSize: "0.95rem" }}>
                               {top.titulo}
                             </ParagrafosStl>
-                            <RelevanciaEstrelasStl title={`Relevância da banca: ${top.relevancia_banca}/5`}>
+                            <RelevanciaEstrelasStl title={`Peso estimado pela IA: ${top.relevancia_banca}/5`}>
                               {"★".repeat(top.relevancia_banca)}
                               {"☆".repeat(5 - top.relevancia_banca)}
                             </RelevanciaEstrelasStl>
                           </div>
-                          <BotaoSecundarioStl
-                            style={{ padding: "0.2rem 0.5rem", fontSize: "0.7rem" }}
-                            onClick={async () => {
-                              if (confirm(`Remover tópico "${top.titulo}"?`)) {
-                                await editaisService.excluirTopico(top.id);
-                                onRecarregar();
-                              }
-                            }}
-                          >
-                            ✕
-                          </BotaoSecundarioStl>
                         </TopicoItemStl>
                       ))
                     )}
