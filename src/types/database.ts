@@ -6,6 +6,15 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
+export interface UserProfile {
+  id: string;
+  username: string;
+  display_name?: string;
+  role: "admin" | "user";
+  status: "active" | "pending" | "rejected";
+  created_at: string;
+}
+
 export interface Edital {
   id: string;
   user_id: string;
