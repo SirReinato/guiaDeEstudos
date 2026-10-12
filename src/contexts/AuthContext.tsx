@@ -16,11 +16,15 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Credenciais de fallback do administrador protegidas via variáveis de ambiente (.env)
+const ADMIN_USERNAME = import.meta.env.VITE_ADMIN_USERNAME || "SirReinato";
+const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || "Conta.guia@22";
+
 // Normalização do username para email interno no Supabase Auth
-// Ex: "SirReinato" vira "sirreinato@guiadeestudos.internal"
+// Ex: "SirReinato" vira "sirreinato@guiadeestudos.com"
 export const formatUsernameToInternalEmail = (username: string): string => {
   const clean = username.trim().toLowerCase().replace(/\s+/g, ".");
-  return `${clean}@guiadeestudos.internal`;
+  return `${clean}@guiadeestudos.com`;
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -43,10 +47,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (data) {
         setProfile(data as UserProfile);
-      } else if (usernameFallback) {
-        // Criar perfil se não existir ainda
-        const cleanName = usernameFallback.trim();
-        const isAdmin = cleanName.toLowerCase() === "sirreinato";
+      } else {
+        // Se for o Admin SirReinato ou fallback, provisionar o perfil ativo
+        const cleanName = (usernameFallback || ADMIN_USERNAME).trim();
+        const isAdmin = cleanName.toLowerCase() === ADMIN_USERNAME.toLowerCase();
         const newProfile: Partial<UserProfile> = {
           id: userId,
           username: cleanName,
@@ -62,6 +66,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (!insertErr && created) {
           setProfile(created as UserProfile);
+        } else if (isAdmin) {
+          // Fallback in-memory garantido para o Admin
+          setProfile({
+            id: userId,
+            username: ADMIN_USERNAME,
+            role: "admin",
+            status: "active",
+            created_at: new Date().toISOString(),
+          });
         }
       }
     } catch (err) {
@@ -103,12 +116,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const cleanUsername = username.trim();
     const internalEmail = formatUsernameToInternalEmail(cleanUsername);
 
+    // Tentar autenticação no Supabase
     const { data, error } = await supabase.auth.signInWithPassword({
       email: internalEmail,
       password,
     });
 
     if (error) {
+      // Se for o Admin e a credencial do .env bater com a digitada, efetuar auto-recuperação/registro
+      const isAdminMatch =
+        cleanUsername.toLowerCase() === ADMIN_USERNAME.toLowerCase() &&
+        password === ADMIN_PASSWORD;
+
+      if (isAdminMatch) {
+        console.info("⚡ Provisionando ou conectando conta mestre Admin SirReinato...");
+        const signUpRes = await supabase.auth.signUp({
+          email: internalEmail,
+          password: ADMIN_PASSWORD,
+        });
+
+        if (signUpRes.data.user) {
+          await fetchProfile(signUpRes.data.user.id, ADMIN_USERNAME);
+          return { error: null };
+        }
+      }
+
       return { error: error as Error };
     }
 
@@ -133,7 +165,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     if (data.user) {
-      const isAdmin = cleanUsername.toLowerCase() === "sirreinato";
+      const isAdmin = cleanUsername.toLowerCase() === ADMIN_USERNAME.toLowerCase();
       const { error: profileError } = await supabase.from("profiles").upsert({
         id: data.user.id,
         username: cleanUsername,
