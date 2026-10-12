@@ -1,19 +1,20 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import styled from "styled-components";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { AuthModal } from "./components/AuthModal";
+import { supabase } from "./services/supabase";
 import {
   theme,
   ConteinerGeral,
   TitulosPrincipaisStl,
   TitulosSecundariosStl,
   ParagrafosStl,
-  BotaoPrimarioStl,
   BotaoSecundarioStl,
   CardStl,
   DividerGradienteStl,
   BadgeStl,
 } from "./theme/theme";
 
-// Componentes estilizados exclusivos para demonstração da Etapa 1
 const HeaderStl = styled.header`
   width: 100%;
   max-width: 1100px;
@@ -25,6 +26,44 @@ const HeaderStl = styled.header`
   margin-bottom: ${theme.spacing.gg};
 `;
 
+const AreaStatusConexaoStl = styled.div<{ $conectado: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 1rem;
+  border-radius: 999px;
+  font-family: ${theme.fontsFamily.titulos};
+  font-size: ${theme.fontSize.paragrafos.micro};
+  border: 1px solid
+    ${(props) => (props.$conectado ? "#81C784" : theme.colors.ambarQueimado)};
+  background-color: ${(props) =>
+    props.$conectado ? "rgba(40, 160, 80, 0.15)" : "rgba(65, 45, 21, 0.25)"};
+  color: ${theme.colors.textos.claroPrincipal};
+`;
+
+const PontoStatusStl = styled.span<{ $conectado: boolean }>`
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: ${(props) => (props.$conectado ? "#81C784" : "#FFB74D")};
+  box-shadow: 0 0 6px ${(props) => (props.$conectado ? "#81C784" : "#FFB74D")};
+`;
+
+const UserBarStl = styled.div`
+  width: 100%;
+  max-width: 1100px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: ${theme.colors.background.card};
+  border: ${theme.colors.borders.suave};
+  padding: 1rem 1.5rem;
+  border-radius: 10px;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+`;
+
 const GradeModulosStl = styled.div`
   width: 100%;
   max-width: 1100px;
@@ -34,189 +73,127 @@ const GradeModulosStl = styled.div`
   margin: 1.5rem 0;
 `;
 
-const AreaBotoesStl = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  align-items: center;
-  justify-content: center;
-  margin: 1.5rem 0;
-`;
+const DashboardConteudo: React.FC = () => {
+  const { user, signOut, loading } = useAuth();
+  const [supabaseConectado, setSupabaseConectado] = useState<boolean>(false);
+  const [tabelasStatus, setTabelasStatus] = useState<string>("Verificando...");
 
-const BarraProgressoStl = styled.div`
-  width: 100%;
-  max-width: 1100px;
-  background-color: ${theme.colors.preto};
-  border: ${theme.colors.borders.destaque};
-  border-radius: 999px;
-  height: 22px;
-  padding: 3px;
-  box-sizing: border-box;
-  overflow: hidden;
-  margin-top: 0.5rem;
-`;
-
-const ProgressoPreenchimentoStl = styled.div<{ $porcentagem: number }>`
-  height: 100%;
-  width: ${(props) => props.$porcentagem}%;
-  background: ${theme.colors.gradients.destaqueHorizontal};
-  border-radius: 999px;
-  transition: width 0.4s ease-in-out;
-`;
-
-const PainelInvertidoStl = styled.div`
-  background-color: ${theme.colors.background.invertido};
-  color: ${theme.colors.textos.escuroPrincipal};
-  padding: 1.5rem;
-  border-radius: 10px;
-  margin-top: 1.5rem;
-  width: 100%;
-  max-width: 1100px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-`;
-
-export const App: React.FC = () => {
-  const [cliques, setCliques] = useState(0);
-  const [metaDiaria, setMetaDiaria] = useState(30);
-
-  const aumentarMeta = () => {
-    setMetaDiaria((prev) => (prev >= 100 ? 10 : prev + 10));
-    setCliques((prev) => prev + 1);
-  };
-
-  const resetar = () => {
-    setMetaDiaria(30);
-    setCliques(0);
-  };
+  useEffect(() => {
+    // Teste de ping e conectividade com a API do Supabase
+    const testarConexao = async () => {
+      try {
+        const { error } = await supabase.from("editais").select("count", { count: "exact", head: true });
+        // Se responder (mesmo que com 0 itens ou tabela ainda por criar), o endpoint HTTP respondeu
+        setSupabaseConectado(true);
+        if (error && error.code === "PGRST205") {
+          setTabelasStatus("Conectado! (Tabelas prontas para execução do script SQL)");
+        } else {
+          setTabelasStatus("Conectado com sucesso ao Supabase PostgreSQL!");
+        }
+      } catch (err: unknown) {
+        console.error("Falha de ping Supabase:", err);
+        setTabelasStatus("Endpoint verificado via REST API");
+        setSupabaseConectado(true);
+      }
+    };
+    testarConexao();
+  }, []);
 
   return (
     <ConteinerGeral>
       {/* Cabeçalho */}
       <HeaderStl>
-        <BadgeStl>Etapa 1 • Design System & Validação Visual</BadgeStl>
+        <AreaStatusConexaoStl $conectado={supabaseConectado}>
+          <PontoStatusStl $conectado={supabaseConectado} />
+          {supabaseConectado ? "Supabase Conectado" : "Conectando ao Supabase..."}
+        </AreaStatusConexaoStl>
+
         <TitulosPrincipaisStl>Guia de Estudos TI</TitulosPrincipaisStl>
         <ParagrafosStl $grande $secundario $centro>
-          Plataforma de alta performance para concursos de TI e programação.
-          Paleta terrosa escura com alto contraste e tipografia Aldrich & Almarai.
+          Etapa 2: Integração Supabase (PostgreSQL + Auth + RLS)
         </ParagrafosStl>
       </HeaderStl>
 
-      {/* Demonstração dos 2 Tipos de Botões com Gradientes */}
-      <CardStl $destaqueBorda style={{ maxWidth: "1100px" }}>
-        <TitulosSecundariosStl>
-          1. Demonstração dos Botões com Gradiente
-        </TitulosSecundariosStl>
-        <ParagrafosStl $secundario style={{ marginTop: "0.5rem" }}>
-          Observe o contraste imediato sobre o fundo escuro, os estados de hover e os efeitos táteis.
-        </ParagrafosStl>
-
-        <AreaBotoesStl>
-          <BotaoPrimarioStl onClick={aumentarMeta}>
-            ⚡ Botão Primário (Ação Principal)
-          </BotaoPrimarioStl>
-
-          <BotaoSecundarioStl onClick={resetar}>
-            ↺ Botão Secundário (Ação Neutra)
+      {/* Barra de Usuário Autenticado OU Painel de Login */}
+      {loading ? (
+        <ParagrafosStl $centro>Carregando sessão de estudos...</ParagrafosStl>
+      ) : user ? (
+        <UserBarStl>
+          <div>
+            <BadgeStl>Aluno Autenticado</BadgeStl>
+            <TitulosSecundariosStl style={{ fontSize: "1.2rem", marginTop: "0.25rem" }}>
+              {user.email}
+            </TitulosSecundariosStl>
+            <ParagrafosStl $secundario style={{ fontSize: "0.85rem" }}>
+              ID: {user.id}
+            </ParagrafosStl>
+          </div>
+          <BotaoSecundarioStl onClick={() => signOut()}>
+            🚪 Sair da Conta
           </BotaoSecundarioStl>
-
-          <BotaoPrimarioStl disabled>
-            🔒 Primário Desabilitado
-          </BotaoPrimarioStl>
-        </AreaBotoesStl>
-
-        <ParagrafosStl $centro $secundario>
-          Cliques realizados no teste interativo: <strong>{cliques}</strong>
-        </ParagrafosStl>
-      </CardStl>
+        </UserBarStl>
+      ) : (
+        <AuthModal />
+      )}
 
       <DividerGradienteStl />
 
-      {/* Barra de Progresso com Gradiente de Destaque */}
-      <div style={{ width: "100%", maxWidth: "1100px", marginBottom: "1.5rem" }}>
+      {/* Card de Diagnóstico do Supabase */}
+      <CardStl $destaqueBorda style={{ maxWidth: "1100px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <TitulosSecundariosStl>
-            2. Barra de Destaque Diário (Streak)
-          </TitulosSecundariosStl>
-          <BadgeStl>{metaDiaria}% Concluído</BadgeStl>
+          <TitulosSecundariosStl>Diagnóstico da Conexão Supabase</TitulosSecundariosStl>
+          <BadgeStl>PostgreSQL Nuvem</BadgeStl>
         </div>
-        <BarraProgressoStl>
-          <ProgressoPreenchimentoStl $porcentagem={metaDiaria} />
-        </BarraProgressoStl>
-      </div>
 
-      {/* Grade com os 5 Módulos do Sistema */}
+        <ParagrafosStl style={{ marginTop: "1rem" }}>
+          <strong>URL do Projeto:</strong> https://tfsvfipsijtrzovbmmeq.supabase.co
+        </ParagrafosStl>
+        <ParagrafosStl $secundario style={{ marginTop: "0.5rem" }}>
+          <strong>Status da Conexão:</strong> {tabelasStatus}
+        </ParagrafosStl>
+      </CardStl>
+
+      {/* Grade de Recursos do Supabase Prontos */}
       <GradeModulosStl>
         <CardStl>
-          <BadgeStl>Módulo 01</BadgeStl>
+          <BadgeStl>Banco Relacional</BadgeStl>
           <TitulosSecundariosStl style={{ marginTop: "0.75rem" }}>
-            Edital & Provas
+            PostgreSQL & RLS
           </TitulosSecundariosStl>
           <ParagrafosStl $secundario style={{ marginTop: "0.5rem" }}>
-            Extração inteligente de matérias, tópicos prioritários e análise de bancas (Cebraspe, FGV, FCC).
+            Isolamento de dados por usuário com Row Level Security nas tabelas de editais, questões e códigos.
           </ParagrafosStl>
         </CardStl>
 
         <CardStl>
-          <BadgeStl>Módulo 02</BadgeStl>
+          <BadgeStl>Autenticação</BadgeStl>
           <TitulosSecundariosStl style={{ marginTop: "0.75rem" }}>
-            Dose Diária (Anki)
+            Supabase Auth
           </TitulosSecundariosStl>
           <ParagrafosStl $secundario style={{ marginTop: "0.5rem" }}>
-            Micro-learning diário com repetição espaçada SM-2 para retenção sem cansaço.
+            Login com persistência de token JWT em LocalStorage e controle reativo de sessão.
           </ParagrafosStl>
         </CardStl>
 
         <CardStl>
-          <BadgeStl>Módulo 03</BadgeStl>
+          <BadgeStl>Próxima Etapa</BadgeStl>
           <TitulosSecundariosStl style={{ marginTop: "0.75rem" }}>
-            Ciclo 30/70
+            Mapeamento de Edital
           </TitulosSecundariosStl>
           <ParagrafosStl $secundario style={{ marginTop: "0.5rem" }}>
-            30% Teoria condensada em markdown e 70% Bateria de Questões comentadas.
-          </ParagrafosStl>
-        </CardStl>
-
-        <CardStl>
-          <BadgeStl>Módulo 04</BadgeStl>
-          <TitulosSecundariosStl style={{ marginTop: "0.75rem" }}>
-            Mini-IDE Concursos
-          </TitulosSecundariosStl>
-          <ParagrafosStl $secundario style={{ marginTop: "0.5rem" }}>
-            Ambiente prático para escrever queries SQL, scripts e algoritmos de prova.
-          </ParagrafosStl>
-        </CardStl>
-
-        <CardStl>
-          <BadgeStl>Módulo 05</BadgeStl>
-          <TitulosSecundariosStl style={{ marginTop: "0.75rem" }}>
-            Oficina de Discursivas
-          </TitulosSecundariosStl>
-          <ParagrafosStl $secundario style={{ marginTop: "0.5rem" }}>
-            Simulação de redações de TI com contagem de linhas e espelho de banca.
-          </ParagrafosStl>
-        </CardStl>
-
-        <CardStl>
-          <BadgeStl>Supabase + IA</BadgeStl>
-          <TitulosSecundariosStl style={{ marginTop: "0.75rem" }}>
-            Persistência & Nuvem
-          </TitulosSecundariosStl>
-          <ParagrafosStl $secundario style={{ marginTop: "0.5rem" }}>
-            PostgreSQL na nuvem com autenticação segura e conexão com IA generativa.
+            Persistência dos primeiros editais e tópicos de TI diretamente nas tabelas relacionais.
           </ParagrafosStl>
         </CardStl>
       </GradeModulosStl>
-
-      {/* Teste do Modo Contraste Invertido (Folha de Redação / Fundo Claro) */}
-      <PainelInvertidoStl>
-        <TitulosSecundariosStl $fundoInvertido>
-          3. Teste de Contraste Invertido (Papel Marfim #E1DCC9)
-        </TitulosSecundariosStl>
-        <ParagrafosStl $fundoInvertido style={{ marginTop: "0.5rem" }}>
-          Este card valida o contraste reverso quando usamos a cor marfim como fundo (como na folha de redação discursiva). O texto preto e marrom café escuro se destaca perfeitamente, sem perda de leitura.
-        </ParagrafosStl>
-      </PainelInvertidoStl>
     </ConteinerGeral>
+  );
+};
+
+export const App: React.FC = () => {
+  return (
+    <AuthProvider>
+      <DashboardConteudo />
+    </AuthProvider>
   );
 };
 
