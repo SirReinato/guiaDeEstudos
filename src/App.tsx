@@ -8,6 +8,7 @@ import { DailyStreakPlayer } from "./components/DailyStreakPlayer";
 import { FlashcardManager } from "./components/FlashcardManager";
 import { CicloEstudos3070 } from "./components/CicloEstudos3070";
 import { MiniIDEArena } from "./components/MiniIDEArena";
+import { RedacaoLaboratorio } from "./components/RedacaoLaboratorio";
 import { editaisService, type EditalCompleto } from "./services/editaisService";
 import {
   flashcardsService,
@@ -119,8 +120,8 @@ const DashboardConteudo: React.FC = () => {
   const [supabaseConectado, setSupabaseConectado] = useState<boolean>(false);
   const [mostrarPainelAdmin, setMostrarPainelAdmin] = useState<boolean>(false);
   const [abaAtiva, setAbaAtiva] = useState<
-    "ide" | "ciclo3070" | "streak" | "flashcards" | "editais" | "overview"
-  >("ide");
+    "redacao" | "ide" | "ciclo3070" | "streak" | "flashcards" | "editais" | "overview"
+  >("redacao");
 
   // Editais
   const [editais, setEditais] = useState<EditalCompleto[]>([]);
@@ -277,10 +278,16 @@ const DashboardConteudo: React.FC = () => {
             <>
               <AbaNavegacaoContainerStl>
                 <AbaBotaoStl
+                  $ativa={abaAtiva === "redacao"}
+                  onClick={() => setAbaAtiva("redacao")}
+                >
+                  ✍️ Oficina de Discursivas (TI)
+                </AbaBotaoStl>
+                <AbaBotaoStl
                   $ativa={abaAtiva === "ide"}
                   onClick={() => setAbaAtiva("ide")}
                 >
-                  💻 Mini-IDE (Desafios TI)
+                  💻 Mini-IDE (Desafios)
                 </AbaBotaoStl>
                 <AbaBotaoStl
                   $ativa={abaAtiva === "ciclo3070"}
@@ -314,7 +321,12 @@ const DashboardConteudo: React.FC = () => {
                 </AbaBotaoStl>
               </AbaNavegacaoContainerStl>
 
-              {/* ABA ATIVA: MINI-IDE DE CONCURSOS */}
+              {/* ABA ATIVA: OFICINA DE DISCURSIVAS */}
+              {abaAtiva === "redacao" && (
+                <RedacaoLaboratorio editalAtivo={editalSelecionado} />
+              )}
+
+              {/* ABA: MINI-IDE DE CONCURSOS */}
               {abaAtiva === "ide" && (
                 <MiniIDEArena editalAtivo={editalSelecionado} />
               )}
@@ -367,8 +379,9 @@ const DashboardConteudo: React.FC = () => {
                     <ParagrafosStl>✅ <strong>Etapa 3</strong>: Mapeador de Edital & Árvore Hierárquica de Disciplinas e Tópicos.</ParagrafosStl>
                     <ParagrafosStl>✅ <strong>Etapa 4</strong>: Dose Diária (Micro-learning, Repetição Espaçada SM-2, Streak de 5 cards diários, Flip 3D).</ParagrafosStl>
                     <ParagrafosStl>✅ <strong>Etapa 5</strong>: Ciclo 30/70 (30% Teoria Ativa em Markdown + 70% Bateria de Questões comentadas de bancas).</ParagrafosStl>
-                    <ParagrafosStl>⚡ <strong>Etapa 6 (Ativa)</strong>: Mini-IDE & Desafios Práticos de Código para TI (SQL, Python, JS).</ParagrafosStl>
-                    <ParagrafosStl>⏳ <strong>Etapa 7 (Próxima)</strong>: Laboratório de Redação & Discursivas Técnicas de TI.</ParagrafosStl>
+                    <ParagrafosStl>✅ <strong>Etapa 6</strong>: Mini-IDE & Desafios Práticos de Código para TI (SQL, Python, JS com Monaco Editor).</ParagrafosStl>
+                    <ParagrafosStl>⚡ <strong>Etapa 7 (Ativa)</strong>: Laboratório de Redação & Discursivas Técnicas de TI (Folha Pautada, Limite de Linhas, Espelho Oficial).</ParagrafosStl>
+                    <ParagrafosStl>⏳ <strong>Etapa 8 (Final)</strong>: Inteligência Artificial (Google Gemini API) & Publicação na Vercel.</ParagrafosStl>
                   </div>
                 </CardStl>
               )}
