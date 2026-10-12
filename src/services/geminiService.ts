@@ -41,7 +41,7 @@ Responda OBRIGATORIAMENTE em formato JSON válido contendo exatamente as seguint
 }`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3.8-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -94,7 +94,7 @@ Avalie o texto com rigor de banca examinadora e responda OBRIGATORIAMENTE em JSO
 }`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3.8-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
