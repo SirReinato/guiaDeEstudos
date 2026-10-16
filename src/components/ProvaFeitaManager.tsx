@@ -1199,9 +1199,8 @@ export const ProvaFeitaManager: React.FC<Props> = ({
             ))}
           </div>
         )}
-      </>
       </div>
-
+      </>
       {/* FORMULÁRIO DE EDIÇÃO DE PROVA */}
       {editandoProvaId !== null && (
         <CardStl $destaqueBorda style={{ marginTop: "1.5rem", padding: "1.5rem" }}>
