@@ -247,6 +247,7 @@ export const ProvaFeitaManager: React.FC<Props> = ({
 
   // Lista interna de provas (carregada do localStorage)
   const [provasInternas, setProvasInternas] = useState<ProvaFeita[]>([]);
+  const [listaProvasAberta, setListaProvasAberta] = useState<boolean>(true);
 
   // Carregar provas do localStorage quando o usuário está autenticado
   useEffect(() => {
@@ -1119,12 +1120,29 @@ export const ProvaFeitaManager: React.FC<Props> = ({
       )}
 
       {/* 4. LISTA DE PROVAS FEITAS */}
-      <div>
-        <TitulosSecundariosStl style={{ marginBottom: "1rem" }}>
-          Suas Provas Realizadas ({provasInternas.length})
-        </TitulosSecundariosStl>
+      <div style={{ marginTop: "1.5rem" }}>
+        <div style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "0.75rem",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <TitulosSecundariosStl style={{ fontSize: "1.15rem", margin: 0 }}>
+              📋 Suas Provas Realizadas ({provasInternas.length})
+            </TitulosSecundariosStl>
+          </div>
+          <BotaoSecundarioStl
+            style={{ fontSize: "0.75rem", padding: "0.4rem 0.8rem" }}
+            onClick={() => setListaProvasAberta(!listaProvasAberta)}
+          >
+            {listaProvasAberta ? "✕ Fechar" : "✓ Abrir"}
+          </BotaoSecundarioStl>
+        </div>
 
-        {provasInternas.length === 0 ? (
+        {listaProvasAberta && (
+          <>
+            {provasInternas.length === 0 ? (
           <ParagrafosStl $secundario>
             Nenhuma prova cadastrada. Cadastre acima a primeira prova realizada!
           </ParagrafosStl>
@@ -1181,6 +1199,7 @@ export const ProvaFeitaManager: React.FC<Props> = ({
             ))}
           </div>
         )}
+      </>
       </div>
 
       {/* FORMULÁRIO DE EDIÇÃO DE PROVA */}
