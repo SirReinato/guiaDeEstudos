@@ -1199,6 +1199,7 @@ export const ProvaFeitaManager: React.FC<Props> = ({
             ))}
           </div>
         )}
+      </>
       </div>
       {/* FORMULÁRIO DE EDIÇÃO DE PROVA */}
       {editandoProvaId !== null && (
