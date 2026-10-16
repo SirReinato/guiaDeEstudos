@@ -1141,7 +1141,7 @@ export const ProvaFeitaManager: React.FC<Props> = ({
         </div>
 
         {listaProvasAberta && (
-          <>
+          <div>
             {provasInternas.length === 0 ? (
           <ParagrafosStl $secundario>
             Nenhuma prova cadastrada. Cadastre acima a primeira prova realizada!
@@ -1199,7 +1199,6 @@ export const ProvaFeitaManager: React.FC<Props> = ({
             ))}
           </div>
         )}
-      </>
       </div>
       {/* FORMULÁRIO DE EDIÇÃO DE PROVA */}
       {editandoProvaId !== null && (
