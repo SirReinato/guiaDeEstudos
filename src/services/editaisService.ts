@@ -51,7 +51,30 @@ export const editaisService = {
     return { data: data as Edital, error: null };
   },
 
-  // 3. Excluir edital (cascateia para disciplinas e tópicos)
+  // 3. Atualizar edital existente (título, banca, orgão, ano)
+  async atualizarEdital(editalId: string, payload: {
+    titulo?: string;
+    banca?: string;
+    orgao?: string;
+    ano?: number;
+  }): Promise<{ data: Edital | null; error: Error | null }> {
+    const { data, error } = await supabase
+      .from("editais")
+      .update({
+        ...(payload.titulo !== undefined && { titulo: payload.titulo }),
+        ...(payload.banca !== undefined && { banca: payload.banca }),
+        ...(payload.orgao !== undefined && { orgao: payload.orgao }),
+        ...(payload.ano !== undefined && { ano: payload.ano }),
+      })
+      .eq("id", editalId)
+      .select()
+      .single();
+
+    if (error) return { data: null, error: error as Error };
+    return { data: data as Edital, error: null };
+  },
+
+  // 4. Excluir edital (cascateia para disciplinas e tópicos)
   async excluirEdital(editalId: string): Promise<{ error: Error | null }> {
     const { error } = await supabase.from("editais").delete().eq("id", editalId);
     return { error: error as Error | null };

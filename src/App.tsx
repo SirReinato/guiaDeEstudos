@@ -12,6 +12,9 @@ import { FlashcardManager } from "./components/FlashcardManager";
 import { CicloEstudos3070 } from "./components/CicloEstudos3070";
 import { MiniIDEArena } from "./components/MiniIDEArena";
 import { RedacaoLaboratorio } from "./components/RedacaoLaboratorio";
+import { ProvaFeitaManager } from "./components/ProvaFeitaManager";
+import type { ProvaFeita } from "./types/database";
+
 import {
   flashcardsService,
   type FlashcardComTopico,
@@ -125,8 +128,17 @@ const DashboardConteudo: React.FC = () => {
   const [supabaseConectado, setSupabaseConectado] = useState<boolean>(false);
   const [mostrarPainelAdmin, setMostrarPainelAdmin] = useState<boolean>(false);
   const [abaAtiva, setAbaAtiva] = useState<
-    "redacao" | "ide" | "ciclo3070" | "streak" | "flashcards" | "editais" | "overview"
+    | "redacao"
+    | "ide"
+    | "ciclo3070"
+    | "streak"
+    | "flashcards"
+    | "editais"
+    | "overview"
+    | "provasFeitas"
   >("redacao");
+
+  const [provaFeitaSelecionada, setProvaFeitaSelecionada] = useState<ProvaFeita | null>(null);
 
   // Flashcards & Streak
   const [cards, setCards] = useState<FlashcardComTopico[]>([]);
@@ -295,6 +307,14 @@ const DashboardConteudo: React.FC = () => {
               </TabBotaoStl>
 
               <TabBotaoStl
+                $ativa={abaAtiva === "provasFeitas"}
+                onClick={() => setAbaAtiva("provasFeitas")}
+              >
+                <span>📝</span>
+                <span>Provas Feitas</span>
+              </TabBotaoStl>
+
+              <TabBotaoStl
                 $ativa={abaAtiva === "overview"}
                 onClick={() => setAbaAtiva("overview")}
               >
@@ -339,6 +359,16 @@ const DashboardConteudo: React.FC = () => {
                 onRecarregar={carregarEditais}
                 editalSelecionado={editalAtivo}
                 onSelecionarEdital={(e) => e && selecionarEdital(e.id)}
+              />
+            )}
+
+            {abaAtiva === "provasFeitas" && (
+              <ProvaFeitaManager
+                provaSelecionada={provaFeitaSelecionada}
+                onSelecionarProva={setProvaFeitaSelecionada}
+                onRecarregar={() => {
+                  // recarrega apenas localmente; a lista vem do próprio componente
+                }}
               />
             )}
 

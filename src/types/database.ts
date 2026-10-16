@@ -114,3 +114,23 @@ export interface DailyStreak {
   meta_concluida: boolean;
   streak_dias: number;
 }
+
+export interface ProvaFeita {
+  id: string;
+  user_id: string;
+  edital_id?: string;
+  nome_prova: string;
+  total_questoes: number;           // total de questões da prova
+  questoes_objetivas: number;       // quantas são objetivas
+  questoes_gerais: number;          // quantas são de conhecimentos gerais
+  peso_geral: number;               // peso da prova no cálculo geral (ex: 1 a 10)
+  peso_objetivo: number;            // peso da parte objetiva (ex: 1 a 10)
+  nota_minima_geral: number;        // nota mínima para aprovação geral (calculada)
+  nota_minima_objetiva: number;     // nota mínima para aprovação objetiva (calculada)
+  nota_corte: number;               // nota mínima de corte da prova
+  data_realizacao: string;
+  gabarito_preliminar?: Record<number, string>; // questão -> alternativa (A/B/C/D/E)
+  gabarito_definitivo?: Record<number, string>;  // questão -> alternativa (A/B/C/D/E)
+  respostas_usuario?: Record<number, string>;    // questão -> alternativa marcada pelo usuário
+  created_at: string;
+}

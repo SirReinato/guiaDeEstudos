@@ -211,6 +211,16 @@ export const EditalManager: React.FC<Props> = ({
   const [novoAno, setNovoAno] = useState(new Date().getFullYear());
   const [salvandoEdital, setSalvandoEdital] = useState(false);
 
+  // Estados de EDIÇÃO de edital existente
+  const [editandoEditalId, setEditandoEditalId] = useState<string | null>(null);
+  const [editTitulo, setEditTitulo] = useState("");
+  const [editBanca, setEditBanca] = useState("Cebraspe");
+  const [editOrgao, setEditOrgao] = useState("");
+  const [editAno, setEditAno] = useState(new Date().getFullYear());
+  const [atualizandoEdital, setAtualizandoEdital] = useState(false);
+
+  const BANCAS_PREDEFINIDAS = ["Cebraspe", "FGV", "FCC", "Cesgranrio", "Outro"];
+
   // Estados de IA & Upload
   const [processandoIA, setProcessandoIA] = useState(false);
   const [statusProgressoIA, setStatusProgressoIA] = useState("");
@@ -347,6 +357,50 @@ export const EditalManager: React.FC<Props> = ({
     onRecarregar();
     if (data) onSelecionarEdital(data as EditalCompleto);
     setSalvandoEdital(false);
+  };
+
+  // Abre formulário de edição pré-preenchido com os dados do edital
+  const handleAbrirEdicao = (edital: EditalCompleto) => {
+    setEditandoEditalId(edital.id);
+    setEditTitulo(edital.titulo);
+    setEditBanca(edital.banca || "Cebraspe");
+    setEditOrgao(edital.orgao || "");
+    setEditAno(edital.ano || new Date().getFullYear());
+  };
+
+  const handleFecharEdicao = () => {
+    setEditandoEditalId(null);
+    setEditTitulo("");
+    setEditBanca("Cebraspe");
+    setEditOrgao("");
+    setEditAno(new Date().getFullYear());
+  };
+
+  // Atualiza o edital no banco
+  const handleAtualizarEdital = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editandoEditalId) return;
+
+    setAtualizandoEdital(true);
+    try {
+      const { data, error } = await editaisService.atualizarEdital(editandoEditalId, {
+        titulo: editTitulo.trim(),
+        banca: editBanca,
+        orgao: editOrgao.trim() || null,
+        ano: Number(editAno),
+      });
+
+      if (error) throw new Error(error.message);
+
+      handleFecharEdicao();
+      onRecarregar();
+      alert("✅ Edital atualizado com sucesso!");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Erro";
+      alert(`Falha ao atualizar edital: ${msg}`);
+    } finally {
+      setAtualizandoEdital(false);
+    }
   };
 
   return (
@@ -499,6 +553,15 @@ export const EditalManager: React.FC<Props> = ({
                   </BotaoPrimarioStl>
                   <BotaoSecundarioStl
                     style={{ fontSize: "0.75rem", padding: "0.4rem 0.8rem" }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAbrirEdicao(ed);
+                    }}
+                  >
+                    ✏️ Editar
+                  </BotaoSecundarioStl>
+                  <BotaoSecundarioStl
+                    style={{ fontSize: "0.75rem", padding: "0.4rem 0.8rem" }}
                     onClick={async (e) => {
                       e.stopPropagation();
                       if (confirm("Excluir este edital?")) {
@@ -516,6 +579,88 @@ export const EditalManager: React.FC<Props> = ({
           </div>
         )}
       </div>
+
+      {/* FORMULÁRIO DE EDIÇÃO DE EDITAL */}
+      {editandoEditalId !== null && (
+        <CardStl $destaqueBorda style={{ marginTop: "1.5rem", padding: "1.5rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+            <TitulosSecundariosStl style={{ fontSize: "1.15rem" }}>
+              ✏️ Editando Edital
+            </TitulosSecundariosStl>
+            <BotaoSecundarioStl
+              style={{ fontSize: "0.75rem", padding: "0.4rem 0.8rem" }}
+              onClick={handleFecharEdicao}
+            >
+              ✕ Cancelar
+            </BotaoSecundarioStl>
+          </div>
+
+          <FormGridStl onSubmit={handleAtualizarEdital}>
+            <CampoStl style={{ gridColumn: "span 2" }}>
+              <RotuloStl>Título do Concurso</RotuloStl>
+              <InputStl
+                type="text"
+                required
+                placeholder="Ex: Técnico de Laboratório - Hemocentro"
+                value={editTitulo}
+                onChange={(e) => setEditTitulo(e.target.value)}
+              />
+            </CampoStl>
+
+            <CampoStl>
+              <RotuloStl>Banca Organizadora</RotuloStl>
+              <SelectStl value={editBanca} onChange={(e) => setEditBanca(e.target.value)}>
+                {BANCAS_PREDEFINIDAS.map((banca) => (
+                  <option key={banca} value={banca}>
+                    {banca}
+                  </option>
+                ))}
+              </SelectStl>
+              {editBanca === "Outro" && (
+                <InputStl
+                  type="text"
+                  placeholder="Digite o nome da banca (ex: Hemocentro)"
+                  value={editBanca === "Outro" ? editTitulo : ""}
+                  style={{ marginTop: "0.5rem" }}
+                />
+              )}
+            </CampoStl>
+
+            <CampoStl>
+              <RotuloStl>Orgão</RotuloStl>
+              <InputStl
+                type="text"
+                placeholder="Ex: Hemocentro de ..."
+                value={editOrgao}
+                onChange={(e) => setEditOrgao(e.target.value)}
+              />
+            </CampoStl>
+
+            <CampoStl>
+              <RotuloStl>Ano</RotuloStl>
+              <InputStl
+                type="number"
+                value={editAno}
+                onChange={(e) => setEditAno(Number(e.target.value))}
+              />
+            </CampoStl>
+
+            <BotaoPrimarioStl
+              type="submit"
+              disabled={atualizandoEdital}
+              style={{ gridColumn: "span 2", fontSize: "0.9rem", padding: "0.75rem" }}
+            >
+              {atualizandoEdital ? "Atualizando..." : "💾 Salvar Alterações"}
+            </BotaoPrimarioStl>
+          </FormGridStl>
+
+          <ParagrafosStl $secundario style={{ marginTop: "0.75rem", fontSize: "0.85rem" }}>
+            💡 Dica: se o edital é do Hemocentro e não é Cebraspe, selecione "Outro" na banca
+            e preencha o nome correto. Isso afeta como o sistema classifica as questões
+            (multipla_escolha vs certo_errado) e o peso de cada tema.
+          </ParagrafosStl>
+        </CardStl>
+      )}
 
       {/* 4. ÁRVORE HIERÁRQUICA ESTATÍSTICA DO EDITAL ATIVO */}
       {editalSelecionado && (
