@@ -24,3 +24,18 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Build artifacts
+build-log.txt
+
+# Test files
+sqlite_test.cjs
+guia_estudos_test.db
+
+# Graphify output
+graphify-out/
+
+# SQLite database files
+*.db
+*.sqlite
+*.sqlite3

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import { theme, TitulosSecundariosStl, ParagrafosStl, CardStl, BadgeStl } from "../theme/theme";
 import { BotaoPrimarioStl, BotaoSecundarioStl } from "../theme/theme";
@@ -77,18 +77,6 @@ const InputStl = styled.input`
   }
 `;
 
-const SelectStl = styled.select`
-  width: 100%;
-  padding: 0.75rem 0.9rem;
-  border-radius: 8px;
-  background-color: ${theme.colors.preto};
-  border: ${theme.colors.borders.destaque};
-  color: ${theme.colors.textos.claroPrincipal};
-  font-family: ${theme.fontsFamily.paragrafos};
-  font-size: ${theme.fontSize.paragrafos.mm};
-  box-sizing: border-box;
-`;
-
 const ProvaItemCardStl = styled.div<{ $selecionado: boolean }>`
   background: ${(props) =>
     props.$selecionado
@@ -117,55 +105,6 @@ const ProvaItemCardStl = styled.div<{ $selecionado: boolean }>`
   }
 `;
 
-const ArvoreContainerStl = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-  margin-top: 1rem;
-`;
-
-const DisciplinaCardStl = styled.div`
-  background-color: ${theme.colors.preto};
-  border: ${theme.colors.borders.destaque};
-  border-radius: 8px;
-  padding: 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-`;
-
-const TopicosGridStl = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 0.75rem;
-`;
-
-const TopicoItemStl = styled.div`
-  background-color: ${theme.colors.background.card};
-  border: 1px solid rgba(225, 220, 201, 0.15);
-  border-radius: 6px;
-  padding: 0.75rem 1rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.5rem;
-`;
-
-const RelevanciaEstrelasStl = styled.span`
-  color: #ffd54f;
-  font-size: 0.85rem;
-  letter-spacing: 2px;
-`;
-
-const InsightBoxStl = styled.div`
-  background-color: rgba(65, 45, 21, 0.2);
-  border: 1px solid ${theme.colors.marfim};
-  border-radius: 8px;
-  padding: 1.25rem;
-  margin-top: 1rem;
-  line-height: 1.6;
-`;
-
 interface Props {
   provas?: ProvaFeita[];
   onRecarregar?: () => void;
@@ -174,15 +113,11 @@ interface Props {
 }
 
 export const ProvaFeitaManager: React.FC<Props> = ({
-  provas: propProvas,
-  onRecarregar: propOnRecarregar,
   provaSelecionada: propProvaSelecionada,
   onSelecionarProva: propOnSelecionarProva,
 }) => {
   const { user } = useAuth();
-  const provas = propProvas ?? [];
   const provaSelecionada = propProvaSelecionada ?? null;
-  const onRecarregar = propOnRecarregar;
   const onSelecionarProva = (p: ProvaFeita | null) => {
     if (propOnSelecionarProva) propOnSelecionarProva(p);
   };
@@ -239,9 +174,9 @@ export const ProvaFeitaManager: React.FC<Props> = ({
   const [atualizandoProva, setAtualizandoProva] = useState(false);
 
   // Estados para preenchimento de respostas e gabaritos da prova selecionada
-  const [respostasUsuario, setRespostasUsuario] = useState<Record<number, string>>({});
-  const [gabaritoPreliminarInput, setGabaritoPreliminarInput] = useState<Record<number, string>>({});
-  const [gabaritoDefinitivoInput, setGabaritoDefinitivoInput] = useState<Record<number, string>>({});
+  const [respostasUsuario, setRespostasUsuario] = useState<Partial<Record<number, string>>>({});
+  const [gabaritoPreliminarInput, setGabaritoPreliminarInput] = useState<Partial<Record<number, string>>>({});
+  const [gabaritoDefinitivoInput, setGabaritoDefinitivoInput] = useState<Partial<Record<number, string>>>({});
   const [salvandoRespostas, setSalvandoRespostas] = useState(false);
   const [estatisticas, setEstatisticas] = useState<ProvaFeitaComStats | null>(null);
 
@@ -254,7 +189,7 @@ export const ProvaFeitaManager: React.FC<Props> = ({
     if (!user) return;
     let montado = true;
     (async () => {
-      const { data, error } = await provasFeitasService.listarProvasFeitas(user.id);
+      const { data } = await provasFeitasService.listarProvasFeitas(user.id);
       if (montado && data) {
         setProvasInternas(data);
       }
@@ -265,7 +200,7 @@ export const ProvaFeitaManager: React.FC<Props> = ({
   // Recarrega provas do localStorage
   const carregarProvas = async () => {
     if (!user) return;
-    const { data, error } = await provasFeitasService.listarProvasFeitas(user.id);
+    const { data } = await provasFeitasService.listarProvasFeitas(user.id);
     if (data) {
       setProvasInternas(data);
     }
@@ -419,7 +354,7 @@ export const ProvaFeitaManager: React.FC<Props> = ({
 
     setAtualizandoProva(true);
     try {
-      const { data, error } = await provasFeitasService.atualizarProvaFeita(editandoProvaId, {
+      const { error } = await provasFeitasService.atualizarProvaFeita(editandoProvaId, {
         nome_prova: editNomeProva.trim(),
         total_questoes: Number(editTotalQuestoes),
         questoes_objetivas: Number(editQuestoesObjetivas),
@@ -545,7 +480,7 @@ export const ProvaFeitaManager: React.FC<Props> = ({
               type="number"
               min="0"
               value={totalQuestoes}
-              onChange={(e) => setTotalQuestoes(e.target.value)}
+              onChange={(e) => setTotalQuestoes(Number(e.target.value))}
             />
           </CampoStl>
 
@@ -555,7 +490,7 @@ export const ProvaFeitaManager: React.FC<Props> = ({
               type="number"
               min="0"
               value={questoesObjetivas}
-              onChange={(e) => setQuestoesObjetivas(e.target.value)}
+              onChange={(e) => setQuestoesObjetivas(Number(e.target.value))}
             />
           </CampoStl>
 
@@ -565,7 +500,7 @@ export const ProvaFeitaManager: React.FC<Props> = ({
               type="number"
               min="0"
               value={questoesGerais}
-              onChange={(e) => setQuestoesGerais(e.target.value)}
+              onChange={(e) => setQuestoesGerais(Number(e.target.value))}
             />
           </CampoStl>
 
@@ -577,7 +512,7 @@ export const ProvaFeitaManager: React.FC<Props> = ({
               max="10"
               step="0.1"
               value={pesoGeral}
-              onChange={(e) => setPesoGeral(e.target.value)}
+              onChange={(e) => setPesoGeral(Number(e.target.value))}
             />
           </CampoStl>
 
@@ -589,7 +524,7 @@ export const ProvaFeitaManager: React.FC<Props> = ({
               max="10"
               step="0.1"
               value={pesoObjetivo}
-              onChange={(e) => setPesoObjetivo(e.target.value)}
+              onChange={(e) => setPesoObjetivo(Number(e.target.value))}
             />
           </CampoStl>
 
@@ -1143,63 +1078,64 @@ export const ProvaFeitaManager: React.FC<Props> = ({
         {listaProvasAberta && (
           <div>
             {provasInternas.length === 0 ? (
-          <ParagrafosStl $secundario>
-            Nenhuma prova cadastrada. Cadastre acima a primeira prova realizada!
-          </ParagrafosStl>
-        ) : (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-              gap: "1rem",
-            }}
-          >
-            {provasInternas.map((p) => (
-              <ProvaItemCardStl
-                key={p.id}
-                $selecionado={provaSelecionada?.id === p.id}
-                onClick={() => onSelecionarProva(p)}
-                style={{ cursor: "pointer" }}
+              <ParagrafosStl $secundario>
+                Nenhuma prova cadastrada. Cadastre acima a primeira prova realizada!
+              </ParagrafosStl>
+            ) : (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+                  gap: "1rem",
+                }}
               >
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <BadgeStl>{p.data_realizacao}</BadgeStl>
-                  <span style={{ fontSize: "0.85rem", opacity: 0.7 }}>{p.peso_geral}x peso</span>
-                </div>
-                <TitulosSecundariosStl style={{ fontSize: "1.2rem" }}>
-                  {p.nome_prova}
-                </TitulosSecundariosStl>
-                <ParagrafosStl $secundario style={{ fontSize: "0.85rem" }}>
-                  Mín. Geral: {p.nota_minima_geral} • Mín. Objetiva: {p.nota_minima_objetiva}
-                </ParagrafosStl>
+                {provasInternas.map((p) => (
+                  <ProvaItemCardStl
+                    key={p.id}
+                    $selecionado={provaSelecionada?.id === p.id}
+                    onClick={() => onSelecionarProva(p)}
+                    style={{ cursor: "pointer" }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <BadgeStl>{p.data_realizacao}</BadgeStl>
+                      <span style={{ fontSize: "0.85rem", opacity: 0.7 }}>{p.peso_geral}x peso</span>
+                    </div>
+                    <TitulosSecundariosStl style={{ fontSize: "1.2rem" }}>
+                      {p.nome_prova}
+                    </TitulosSecundariosStl>
+                    <ParagrafosStl $secundario style={{ fontSize: "0.85rem" }}>
+                      Mín. Geral: {p.nota_minima_geral} • Mín. Objetiva: {p.nota_minima_objetiva}
+                    </ParagrafosStl>
 
-                <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
-                  <BotaoPrimarioStl style={{ fontSize: "0.75rem", padding: "0.4rem 0.8rem", width: "100%" }}>
-                    {provaSelecionada?.id === p.id ? "✓ Prova Ativa" : "Selecionar Prova"}
-                  </BotaoPrimarioStl>
-                  <BotaoSecundarioStl
-                    style={{ fontSize: "0.75rem", padding: "0.4rem 0.8rem" }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleAbrirEdicao(p);
-                    }}
-                  >
-                    ✏️ Editar
-                  </BotaoSecundarioStl>
-                  <BotaoSecundarioStl
-                    style={{ fontSize: "0.75rem", padding: "0.4rem 0.8rem" }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleExcluirProva(p);
-                    }}
-                  >
-                    🗑️
-                  </BotaoSecundarioStl>
-                </div>
-              </ProvaItemCardStl>
-            ))}
+                    <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
+                      <BotaoPrimarioStl style={{ fontSize: "0.75rem", padding: "0.4rem 0.8rem", width: "100%" }}>
+                        {provaSelecionada?.id === p.id ? "✓ Prova Ativa" : "Selecionar Prova"}
+                      </BotaoPrimarioStl>
+                      <BotaoSecundarioStl
+                        style={{ fontSize: "0.75rem", padding: "0.4rem 0.8rem" }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAbrirEdicao(p);
+                        }}
+                      >
+                        ✏️ Editar
+                      </BotaoSecundarioStl>
+                      <BotaoSecundarioStl
+                        style={{ fontSize: "0.75rem", padding: "0.4rem 0.8rem" }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleExcluirProva(p);
+                        }}
+                      >
+                        🗑️
+                      </BotaoSecundarioStl>
+                    </div>
+                  </ProvaItemCardStl>
+                ))}
+              </div>
+            )}
           </div>
         )}
-      </>
       </div>
       {/* FORMULÁRIO DE EDIÇÃO DE PROVA */}
       {editandoProvaId !== null && (
@@ -1233,7 +1169,7 @@ export const ProvaFeitaManager: React.FC<Props> = ({
                 type="number"
                 min="0"
                 value={editTotalQuestoes}
-                onChange={(e) => setEditTotalQuestoes(e.target.value)}
+                onChange={(e) => setEditTotalQuestoes(Number(e.target.value))}
               />
             </CampoStl>
 
@@ -1243,7 +1179,7 @@ export const ProvaFeitaManager: React.FC<Props> = ({
                 type="number"
                 min="0"
                 value={editQuestoesObjetivas}
-                onChange={(e) => setEditQuestoesObjetivas(e.target.value)}
+                onChange={(e) => setEditQuestoesObjetivas(Number(e.target.value))}
               />
             </CampoStl>
 
@@ -1253,7 +1189,7 @@ export const ProvaFeitaManager: React.FC<Props> = ({
                 type="number"
                 min="0"
                 value={editQuestoesGerais}
-                onChange={(e) => setEditQuestoesGerais(e.target.value)}
+                onChange={(e) => setEditQuestoesGerais(Number(e.target.value))}
               />
             </CampoStl>
 
@@ -1265,7 +1201,7 @@ export const ProvaFeitaManager: React.FC<Props> = ({
                 max="10"
                 step="0.1"
                 value={editPesoGeral}
-                onChange={(e) => setEditPesoGeral(e.target.value)}
+                onChange={(e) => setEditPesoGeral(Number(e.target.value))}
               />
             </CampoStl>
 
@@ -1277,7 +1213,7 @@ export const ProvaFeitaManager: React.FC<Props> = ({
                 max="10"
                 step="0.1"
                 value={editPesoObjetivo}
-                onChange={(e) => setEditPesoObjetivo(e.target.value)}
+                onChange={(e) => setEditPesoObjetivo(Number(e.target.value))}
               />
             </CampoStl>
 

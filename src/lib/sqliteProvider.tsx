@@ -3,8 +3,8 @@
  * Inicializa o banco SQLite local (sql.js) assim que o app monta.
  */
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { initSQLite, saveSQLiteToStorage, getSQLite } from "./sqlite";
+import React, { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { initSQLite, getSQLite } from "./sqlite";
 
 interface SQLiteContextType {
   inicializado: boolean;

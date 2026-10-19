@@ -3,7 +3,8 @@
  * Síncrono, sem WASM, sem inicialização assíncrona. Funciona imediatamente.
  */
 
-import type { ProvaFeita, ProvaFeitaComStats } from "./provasFeitasService";
+import type { ProvaFeita } from "../types/database";
+import type { ProvaFeitaComStats } from "./provasFeitasService";
 
 const STORAGE_KEY = "guia_estudos_provas_feitas";
 
@@ -59,9 +60,9 @@ export const provasFeitasLocalStorageService = {
     nota_minima_objetiva?: number;
     nota_corte?: number;
     data_realizacao?: string;
-    gabarito_preliminar?: Record<number, string>;
-    gabarito_definitivo?: Record<number, string>;
-    respostas_usuario?: Record<number, string>;
+    gabarito_preliminar?: Partial<Record<number, string>>;
+    gabarito_definitivo?: Partial<Record<number, string>>;
+    respostas_usuario?: Partial<Record<number, string>>;
   }): Promise<{ data: ProvaFeita | null; error: Error | null }> {
     try {
       const id = gerarUUID();
@@ -108,13 +109,11 @@ export const provasFeitasLocalStorageService = {
     nota_minima_objetiva?: number;
     nota_corte?: number;
     data_realizacao?: string;
-    gabarito_preliminar?: Record<number, string>;
-    gabarito_definitivo?: Record<number, string>;
-    respostas_usuario?: Record<number, string>;
+    gabarito_preliminar?: Partial<Record<number, string>>;
+    gabarito_definitivo?: Partial<Record<number, string>>;
+    respostas_usuario?: Partial<Record<number, string>>;
   }): Promise<{ data: ProvaFeita | null; error: Error | null }> {
     try {
-      const todas = lerProvas(""); // ler todas, depois filtramos
-      // Precisamos saber o user_id — vamos ler tudo e encontrar
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return { data: null, error: new Error("Prova não encontrada") };
 
@@ -253,8 +252,6 @@ export const provasFeitasLocalStorageService = {
       notaDefinitivo: Math.round(notaDefinitivo * 100) / 100,
       aprovadoPreliminar: pontosPreliminar >= prova.nota_minima_geral,
       aprovadoDefinitivo: pontosDefinitivo >= prova.nota_minima_geral,
-
-      // Detalhes por módulo
       acertosPreliminarGerais,
       acertosPreliminarEspecificas,
       acertosDefinitivoGerais,

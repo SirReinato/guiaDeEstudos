@@ -129,8 +129,8 @@ export interface ProvaFeita {
   nota_minima_objetiva: number;     // nota mínima para aprovação objetiva (calculada)
   nota_corte: number;               // nota mínima de corte da prova
   data_realizacao: string;
-  gabarito_preliminar?: Record<number, string>; // questão -> alternativa (A/B/C/D/E)
-  gabarito_definitivo?: Record<number, string>;  // questão -> alternativa (A/B/C/D/E)
-  respostas_usuario?: Record<number, string>;    // questão -> alternativa marcada pelo usuário
+  gabarito_preliminar?: Partial<Record<number, string>>; // questão -> alternativa (A/B/C/D/E)
+  gabarito_definitivo?: Partial<Record<number, string>>;  // questão -> alternativa (A/B/C/D/E)
+  respostas_usuario?: Partial<Record<number, string>>;    // questão -> alternativa marcada pelo usuário
   created_at: string;
 }

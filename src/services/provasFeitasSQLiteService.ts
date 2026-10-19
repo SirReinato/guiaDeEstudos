@@ -4,7 +4,8 @@
  */
 
 import { initSQLite, saveSQLiteToStorage, getSQLite } from "../lib/sqlite";
-import type { ProvaFeita, ProvaFeitaComStats } from "./provasFeitasService";
+import type { ProvaFeita } from "../types/database";
+import type { ProvaFeitaComStats } from "./provasFeitasService";
 
 function gerarUUID(): string {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
@@ -67,8 +68,8 @@ export const provasFeitasSQLiteService = {
       const valores = result.values;
 
       const provas: ProvaFeita[] = valores.map((v: any[]) => {
-        const row: any = {};
-        columns.forEach((col, i) => {
+        const row: Record<string, any> = {};
+        columns.forEach((col: string, i: number) => {
           row[col] = v[i];
         });
         return rowToProva(row);
@@ -94,9 +95,9 @@ export const provasFeitasSQLiteService = {
     nota_minima_objetiva?: number;
     nota_corte?: number;
     data_realizacao?: string;
-    gabarito_preliminar?: Record<number, string>;
-    gabarito_definitivo?: Record<number, string>;
-    respostas_usuario?: Record<number, string>;
+    gabarito_preliminar?: Partial<Record<number, string>>;
+    gabarito_definitivo?: Partial<Record<number, string>>;
+    respostas_usuario?: Partial<Record<number, string>>;
   }): Promise<{ data: ProvaFeita | null; error: Error | null }> {
     try {
       const db = getSQLite();
@@ -166,9 +167,9 @@ export const provasFeitasSQLiteService = {
     nota_minima_objetiva?: number;
     nota_corte?: number;
     data_realizacao?: string;
-    gabarito_preliminar?: Record<number, string>;
-    gabarito_definitivo?: Record<number, string>;
-    respostas_usuario?: Record<number, string>;
+    gabarito_preliminar?: Partial<Record<number, string>>;
+    gabarito_definitivo?: Partial<Record<number, string>>;
+    respostas_usuario?: Partial<Record<number, string>>;
   }): Promise<{ data: ProvaFeita | null; error: Error | null }> {
     try {
       const db = getSQLite();

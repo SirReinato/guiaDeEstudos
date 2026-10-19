@@ -2,7 +2,7 @@ import { supabase } from "./supabase";
 import type { ProvaFeita } from "../types/database";
 
 export interface ProvaFeitaComStats extends ProvaFeita {
-  totalQuestoes?: number;
+  totalQuestoes: number;
   acertosPreliminar?: number;
   acertosDefinitivo?: number;
   pontosPreliminar?: number;
@@ -68,9 +68,9 @@ async function supabaseCriar(payload: {
   questoes_gerais: number; user_id: string; edital_id?: string;
   peso_geral?: number; peso_objetivo?: number; nota_minima_geral?: number;
   nota_minima_objetiva?: number; nota_corte?: number; data_realizacao?: string;
-  gabarito_preliminar?: Record<number, string>;
-  gabarito_definitivo?: Record<number, string>;
-  respostas_usuario?: Record<number, string>;
+  gabarito_preliminar?: Partial<Record<number, string>>;
+  gabarito_definitivo?: Partial<Record<number, string>>;
+  respostas_usuario?: Partial<Record<number, string>>;
 }): Promise<ProvaFeita | null> {
   const { data, error } = await supabase
     .from("provas_feitas")
@@ -233,9 +233,9 @@ export const provasFeitasService = {
     questoes_gerais: number; user_id: string; edital_id?: string;
     peso_geral?: number; peso_objetivo?: number; nota_minima_geral?: number;
     nota_minima_objetiva?: number; nota_corte?: number; data_realizacao?: string;
-    gabarito_preliminar?: Record<number, string>;
-    gabarito_definitivo?: Record<number, string>;
-    respostas_usuario?: Record<number, string>;
+    gabarito_preliminar?: Partial<Record<number, string>>;
+    gabarito_definitivo?: Partial<Record<number, string>>;
+    respostas_usuario?: Partial<Record<number, string>>;
   }): Promise<{ data: ProvaFeita | null; error: Error | null }> {
     try {
       const supabaseData = await supabaseCriar(payload);
@@ -270,9 +270,9 @@ export const provasFeitasService = {
     nome_prova?: string; total_questoes?: number; questoes_objetivas?: number;
     questoes_gerais?: number; peso_geral?: number; peso_objetivo?: number;
     nota_minima_geral?: number; nota_minima_objetiva?: number; nota_corte?: number;
-    data_realizacao?: string; gabarito_preliminar?: Record<number, string>;
-    gabarito_definitivo?: Record<number, string>;
-    respostas_usuario?: Record<number, string>;
+    data_realizacao?: string; gabarito_preliminar?: Partial<Record<number, string>>;
+    gabarito_definitivo?: Partial<Record<number, string>>;
+    respostas_usuario?: Partial<Record<number, string>>;
   }): Promise<{ data: ProvaFeita | null; error: Error | null }> {
     try {
       const supabaseData = await supabaseAtualizar(provaId, {

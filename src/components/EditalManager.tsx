@@ -383,10 +383,10 @@ export const EditalManager: React.FC<Props> = ({
 
     setAtualizandoEdital(true);
     try {
-      const { data, error } = await editaisService.atualizarEdital(editandoEditalId, {
+      const { error } = await editaisService.atualizarEdital(editandoEditalId, {
         titulo: editTitulo.trim(),
         banca: editBanca,
-        orgao: editOrgao.trim() || null,
+        orgao: editOrgao.trim() || undefined,
         ano: Number(editAno),
       });
 
