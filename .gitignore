@@ -39,3 +39,8 @@ graphify-out/
 *.db
 *.sqlite
 *.sqlite3
+
+# Local dev helpers
+start-dev.bat
+start-dev.ps1
+start-dev.lnk
